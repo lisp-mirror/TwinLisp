@@ -1,0 +1,2818 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+    <title>TwinLisp for lisp users</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="Mikalai Birukou" />
+    <meta name="topic" content="TwinLisp for lisp users" />
+    <link rel="stylesheet" media="screen" type="text/css" href="docstyle.css" />
+    <link rel="stylesheet" media="print" type="text/css" href="print%20single%20page%20doc.css" />
+</head>
+<body>
+
+<div class="navigation">
+<ul class="nav">
+    <li class="nav"> <a class="nav" href="http://twinlisp.nongnu.org/" title="TwinLisp Homepage"><em>TwinLisp Home</em></a> </li>
+</ul>
+</div>
+
+
+
+<div id="maintext">
+
+<div class="textSection">
+
+<h1><em>TwinLisp</em> for lisp users</h1>
+
+<p>
+<em>TwinLisp</em> is a new way of programing in Common Lisp. The following is a code that will be executed by a Common Lisp machine:
+</p>
+<pre>
+<code>def helloWorld {</code>
+<code>    cout() &lt;&lt; &quot;Hello World!&quot; &lt;&lt; #\Newline }</code>
+</pre>
+<p>
+More precisely, this code is first translated by TwinLisp into Common Lisp, which is then executed by a lisp machine.
+</p>
+<p>
+This document describes TwinLisp's syntax, how it is translated into Common Lisp, what libraries are used, etc. It is assumed that the reader has some idea about Common Lisp.
+</p>
+
+</div>
+
+
+
+<div class="textSection">
+
+<h2><a id="Contents">Contents</a></h2>
+
+<ul id="contents">
+    <li class="contents"><a class="contents" href="#Interpreter"><em>TwinLisp</em> Interpreter</a></li>
+    <li class="contents"><a class="contents" href="#IdentAndOpers">Identifiers and Operators</a></li>
+    <li class="contents"><a class="contents" href="#ExprAndCodeBlocks">Code Expressions and Blocks</a></li>
+    <li class="contents"><a class="contents" href="#Comments">Comments</a></li>
+    <li class="contents"><a class="contents" href="#OperMeths">Operator Methods</a></li>
+    <li class="contents"><a class="contents" href="#ScopeOfVars">Scope of Variables</a></li>
+    <li class="contents"><a class="contents" href="#DefFuncsMacs">Defining Functions and Macros</a></li>
+    <li class="contents"><a class="contents" href="#CallFuncMacs">Calling Functions and Macros</a></li>
+    <li class="contents"><a class="contents" href="#SlotAndMethCall">Calling Methods and Accessing Objects' Slots</a></li>
+    <li class="contents"><a class="contents" href="#Shortcuts">Shortcuts</a></li>
+    <li class="contents"><a class="contents" href="#CLForms">Common Lisp Forms (S-expressions)</a></li>
+    <li class="contents"><a class="contents" href="#CLCode">Mixing with Common Lisp code</a></li>
+    <li class="contents"><a class="contents" href="#StdContainers">Standard Containers</a></li>
+    <li class="contents"><a class="contents" href="#CtrlFlowStruct">Control Flow Structures</a></li>
+        <li class="cont_lower1"><a class="contents" href="#IFs">IFs</a></li>
+        <li class="cont_lower1"><a class="contents" href="#Loops">Loops</a></li>
+        <li class="cont_lower1"><a class="contents" href="#BlockAndProg">Block and Prog</a></li>
+        <li class="cont_lower1"><a class="contents" href="#DynExits">Dynamic Exits</a></li>
+    <li class="contents"><a class="contents" href="#StructsAndClasses">Structs and Classes</a></li>
+    <li class="contents"><a class="contents" href="#DefAndUsePacks">Definition and Use of Packages</a></li>
+    <li class="contents"><a class="contents" href="#TLBlocksAndDir">TwinLisp's block structures and directives</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLblock">block</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLbreak">break</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLcase">case</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLcatch">catch</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLclass">class</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLcomcase">comcase</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLcond">cond</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLdef">def</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLdefgen">defgen</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLdo">do</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLdos">dos</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLflet">flet</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLfor">for</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLgfun">gfun</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLglabels">glabels</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLglet">glet</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLglobal">global</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLhandle">handle</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLif">if</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLinside">inside</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLlabels">labels</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLlambda">lambda</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLlet">let</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLlets">lets</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLlexscope">lexscope</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLmac">mac</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLmaclet">maclet</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLmeth">meth</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLpackage">package</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLprog">prog</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLprogs">progs</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLrestart">restart</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLreturn">return</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLstruct">struct</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLthrow">throw</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLtimes">times</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLtry">try</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLtypecase">typecase</a></li>
+        <li class="cont_lower1"><a class="contents" href="#TLuse">use</a></li>
+</ul>
+
+</div>
+
+
+
+<div class="textSection">
+
+<h2><a id="Interpreter"><em>TwinLisp</em> Interpreter</a></h2>
+
+<p>
+You can get the latest version of a TwinLisp interpreter in a <a class="inText" href="http://twinlisp.nongnu.org/download.html">download area</a>.
+</p>
+<p>
+When interpreter is installed, interactive session can be started by typing 'tlisp' at the shell prompt:
+</p>
+<pre>
+$ tlisp
+TwinLisp interpreter.
+Typing "Ctrl-D" or "exit" quits interpreter.
+&gt;&gt;&gt;
+</pre>
+<p>
+Interpreter uses &quot;&gt;&gt;&gt;&quot; prompt to indicate that it is waiting for commands:
+</p>
+<pre>
+&gt;&gt;&gt; 1+2
+
+3
+&gt;&gt;&gt;
+</pre>
+<p>
+When typing several lines, interpreter will use &quot;...&quot; prompt to indicate that expression hasn't been finished:
+</p>
+<pre>
+&gt;&gt;&gt; progn {
+...     a=2
+...     a**5}
+
+32
+&gt;&gt;&gt;
+</pre>
+<p>
+TwinLisp is a translator from TwinLisp code to Common Lisp code. So, execution of files and interpreter have to be changed to include translation phase before evalution in Common Lisp machine. TwinLisp interpreter executes TREPL -- translate-read-evaluate-print loop. You may check +, ++, and +++ <a class="inText" href="http://www.lisp.org/HyperSpec/Body/var_plcm_plplcm_plplpl.html#PLPLPL">usual variables</a> to see the actual Common Lisp code -- an output from a reader that is fed into eval.
+</p>
+<pre>
+&gt;&gt;&gt; progn {
+...     a=2
+...     a**5}
+
+32
+&gt;&gt;&gt; &amp;+
+
+(PROGN (LET (A) (SETF A 2) (_**_ A 5)))
+&gt;&gt;&gt; 
+</pre>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="IdentAndOpers">Identifiers and Operators</a></h2>
+
+<p>
+Unlike Common Lisp's syntax, TwinLisp uses regular binary and unary operators like + and - in the same way as they are used in languages like Python or Java. But, TwinLisp needs to use Common Lisp's functions, macros, and usually names in CL are something like *global-variable*, where non-alpha-numeric characters are legal inside of the identifier. In order to treat special characters inside of an identifier in CL's manner, TL requires &amp;-character to be the first character of the identifier. For example:
+</p>
+<pre>
+&gt;&gt;&gt; def &amp;some-func(&amp;a-var,&amp;b-var) {
+...     &amp;a-var + &amp;b-var }
+
+SOME-FUNC
+&gt;&gt;&gt; &amp;+
+
+(DEFUN SOME-FUNC (A-VAR B-VAR) (_+_ A-VAR B-VAR))
+&gt;&gt;&gt;
+</pre>
+<p>
+&amp;-ed identifier should be followed by a comma, by an opening or closing round bracket, by a semicolomn, by an end of line or an end of file. Other characters will be treated as if they are part of the identifier. Compare previous example with:
+</p>
+<pre>
+&gt;&gt;&gt; &amp;a-var+&amp;b-var
+ERROR: EVAL: variable A-VAR+&amp;B-VAR has no value
+&gt;&gt;&gt;
+</pre>
+<p>
+Moreover, &amp;-character can be used to create identifier that are identical in spelling to reserved TL words. For example:
+</p>
+<pre>
+&gt;&gt;&gt; package = 1
+SYNTAX ERROR:
+Required 'NAME_ON_DIFF_LINE' part of a block structure is missing on line 1
+&gt;&gt;&gt; &amp;package = 1
+
+1
+&gt;&gt;&gt;
+</pre>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="ExprAndCodeBlocks">Code expressions and blocks</a></h2>
+
+<p>
+TwinLisp syntax is different from that of Common Lisp. In fact, the main goal of TwinLisp is having an alternative syntax on top of an excelent CL runtime. Many people do not see treasures of CL behind its unpopular syntax. Syntax itself is a very thin layer that should be able to change to accommodate human preferences, which do not really matter at a time when program runs, but have an impact on a success of a development process.
+</p>
+<p>
+TwinLisp uses operators like they are used in math and in languages like Python or Java. Function calls are much like those in Python or Java. There are special block structures, just like Python and Java. But there are differences.
+</p>
+<p>
+The simpliest expressions of TwinLisp are atoms, like a symbol, or a number, or a string. Simple expressions can be compound by use of operators. Every expression is terminated by a comma, by a comment, by an end of line, by an end of file or by some closing bracket that encloses one or several expressions.
+</p>
+<p>
+There are also blocks of code, that are enclosed in some brackets. Take a look at the following definition of a function:
+</p>
+<pre>
+&gt;&gt;&gt; def foo(a,b) {
+...     c = a+b
+...     print(c)
+...     c }
+
+FOO
+</pre>
+<p>
+And compare it to Python
+</p>
+<pre>
+&gt;&gt;&gt; def foo(a,b):
+...     c = a+b
+...     print c
+...     return c
+...
+</pre>
+<p>
+And to Java (assuming that this function is some class' method)
+</p>
+<pre>
+int foo(int a, int b) {
+    int c = a+b;
+    System.out.println(c);
+    return c; }
+</pre>
+<p>
+TwinLisp's expressions are terminated by the end of the line, like they are in Python. This saves one character on each line in comparison to Java, where each line has a semicolomn at the end. On the other hand TwinLisp uses brackets to indicate a start and an end of a code block, like Java, and unlike Python. Python uses one colomn to mark a beginning of the block and a strict change of indentation to mark its end. Arguably, Python saves one character, but, besides having strict indentation rules, it misses one huge feature ever present in CL. Change of indentation requires a newline character, which also terminates an expression, of which a block can be a part. For example, the following seems impossible with Python's indentation rules:
+</p>
+<pre>
+&gt;&gt;&gt; a = 3
+
+3
+&gt;&gt;&gt; 7 + if (a>0) { -a }
+...     else { a } - 1
+
+3
+</pre>
+<p>
+Like it is in Python, if a line is too short for you, it can be continued by placing \ . And unlike Python, you may type anything after character \ , since it all will be discarded up to the end of a line:
+</p>
+<pre>
+&gt;&gt;&gt; 12 + 7** \ what power should we insert ?
+...         2 - 9
+
+52
+</pre>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="Comments">Comments</a></h2>
+
+<p>
+For now, there are only one-line lisp comments available
+</p>
+<pre>
+&gt;&gt;&gt; progn {
+...     a = 0
+...     ; this is a comment
+...     a += 5 ; another comment
+...     a**a }
+
+3125
+</pre>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="OperMeths">Operator Methods</a></h2>
+
+<p>
+This section describes operators used in TwinLisp. Operators are translated into functions, macros or generic functions. When a generic function correspondes to an operator, new methods can be defined to provide new behaviour.
+</p>
+<p>
+Order of operator application depends on type of an operator, precedence and associativity. There are three types of operators in TL: binary operators (those that act on two operands), unary operators (those that act on one operand only) and, for the lack of a word, &quot;multary&quot; operators (these act on many operands at once). Precedence is defined as a number, the lower its value, the higher the priority of an operator. Association determines an order, when two operators have the same precedence.
+</p>
+<p>
+So, here are TwinLisp's operators:
+</p>
+
+<table class="operators">
+    <tr>
+        <th>Oper</th>
+        <th>Type</th>
+        <th>Prec</th>
+        <th>Assoc</th>
+        <th>Defined by</th>
+    </tr>
+    <tr>
+        <td>+</td>
+        <td>unary</td>
+        <td>2</td>
+        <td>Right</td>
+        <td>&amp;_unary+_(x) -- generic function</td>
+    </tr>
+    <tr>
+        <td>-</td>
+        <td>unary</td>
+        <td>2</td>
+        <td>Right</td>
+        <td>&amp;_unary-_(x) -- generic function</td>
+    </tr>
+    <tr>
+        <td>!</td>
+        <td>unary</td>
+        <td>2</td>
+        <td>Right</td>
+        <td>_not_(x) -- generic function</td>
+    </tr>
+    <tr>
+        <td>not</td>
+        <td>unary</td>
+        <td>2</td>
+        <td>Right</td>
+        <td>_not_(x) -- generic function</td>
+    </tr>
+    <tr>
+        <td>**</td>
+        <td>binary</td>
+        <td>3</td>
+        <td>Right</td>
+        <td>&amp;_**_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>*</td>
+        <td>binary</td>
+        <td>4</td>
+        <td>Left</td>
+        <td>&amp;_*_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>/</td>
+        <td>binary</td>
+        <td>4</td>
+        <td>Left</td>
+        <td>&amp;_/_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>%</td>
+        <td>binary</td>
+        <td>4</td>
+        <td>Left</td>
+        <td>&amp;_%_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>+</td>
+        <td>binary</td>
+        <td>5</td>
+        <td>Left</td>
+        <td>&amp;_+_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>-</td>
+        <td>binary</td>
+        <td>5</td>
+        <td>Left</td>
+        <td>&amp;_-_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>&lt;</td>
+        <td>binary</td>
+        <td>7</td>
+        <td>Left</td>
+        <td>&amp;_&lt;_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>&gt;</td>
+        <td>binary</td>
+        <td>7</td>
+        <td>Left</td>
+        <td>&amp;_&gt;_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>&lt;=</td>
+        <td>binary</td>
+        <td>7</td>
+        <td>Left</td>
+        <td>&amp;_&lt;=_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>&gt;=</td>
+        <td>binary</td>
+        <td>7</td>
+        <td>Left</td>
+        <td>&amp;_&gt;=_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>==</td>
+        <td>binary</td>
+        <td>8</td>
+        <td>Left</td>
+        <td>&amp;_==_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>!=</td>
+        <td>binary</td>
+        <td>8</td>
+        <td>Left</td>
+        <td>&amp;_!=_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>&amp;</td>
+        <td>binary</td>
+        <td>9</td>
+        <td>Left</td>
+        <td>_and_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>and</td>
+        <td>binary</td>
+        <td>9</td>
+        <td>Left</td>
+        <td>_and_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>^</td>
+        <td>binary</td>
+        <td>10</td>
+        <td>Left</td>
+        <td>_xor_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>xor</td>
+        <td>binary</td>
+        <td>10</td>
+        <td>Left</td>
+        <td>_xor_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>|</td>
+        <td>binary</td>
+        <td>11</td>
+        <td>Left</td>
+        <td>_or_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>or</td>
+        <td>binary</td>
+        <td>11</td>
+        <td>Left</td>
+        <td>_or_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>&lt;&lt;</td>
+        <td>binary</td>
+        <td>13</td>
+        <td>Left</td>
+        <td>&amp;_&lt;&lt;_(x,y) -- generic function</td>
+    </tr>
+    <tr>
+        <td>@</td>
+        <td>multary</td>
+        <td>14</td>
+        <td>n/a</td>
+        <td><a class="inText" href="http://www.lisp.org/HyperSpec/Body/acc_values.html">values</a>(x,y,...) -- function</td>
+    </tr>
+    <tr>
+        <td>=</td>
+        <td>binary</td>
+        <td>15</td>
+        <td>Right</td>
+        <td><a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_setfcm_psetf.html">setf</a>(x,y) -- macro</td>
+    </tr>
+    <tr>
+        <td>+=</td>
+        <td>binary</td>
+        <td>15</td>
+        <td>Right</td>
+        <td>&amp;_+=_(x,y) -- macro</td>
+    </tr>
+    <tr>
+        <td>-=</td>
+        <td>binary</td>
+        <td>15</td>
+        <td>Right</td>
+        <td>&amp;_-=_(x,y) -- macro</td>
+    </tr>
+    <tr>
+        <td>*=</td>
+        <td>binary</td>
+        <td>15</td>
+        <td>Right</td>
+        <td>&amp;_*=_(x,y) -- macro</td>
+    </tr>
+    <tr>
+        <td>/=</td>
+        <td>binary</td>
+        <td>15</td>
+        <td>Right</td>
+        <td>&amp;_/=_(x,y) -- macro</td>
+    </tr>
+</table>
+<p>
+Let's look at how these operators are used:
+</p>
+<ul class="inText">
+    <li class="inText">Unary + and - are defined for numbers and have a usual mathematical sense.
+    <pre>
+&gt;&gt;&gt; +3 + -2
+
+1
+    </pre>
+    </li>
+    <li class="inText">not (!) acts like logical not, except when it is applied to a bit-vector. Then it acts as a bitwise not.
+    <pre>
+&gt;&gt;&gt; not nil
+
+T
+&gt;&gt;&gt; not #*001101
+
+#*110010
+    </pre>
+    </li>
+    <li class="inText">** is an exponentiation operator for numbers. x**y is the same as expt(x,y).
+    <pre>
+&gt;&gt;&gt; 2**8
+
+256
+    </pre>
+    </li>
+    <li class="inText">* and / are multiplication and division for numbers.
+    <pre>
+&gt;&gt;&gt; 9*3
+
+27
+&gt;&gt;&gt; 27 / 2.0
+
+13.5
+    </pre>
+    </li>
+    <li class="inText">% has a sense of whole division for integers
+    <pre>
+&gt;&gt;&gt; 27 % 2
+
+13
+    </pre>
+    and it is used as a format operator for strings
+    <pre>
+&gt;&gt;&gt; "~D+~D=~D" % [2,2,4]
+
+"2+2=4"
+&gt;&gt;&gt; "Year ~D" % 2006
+
+"Year 2006"
+    </pre>
+    </li>
+    <li class="inText">Binary + adds numbers
+    <pre>
+&gt;&gt;&gt; 2+2
+
+4
+    </pre>
+    it also concatenates vectors, lists and strings (the resultant structure is not shared with initial ones)
+    <pre>
+&gt;&gt;&gt; [1,2,"a"] + ["b","c"]
+
+#(1 2 "a" "b" "c")
+&gt;&gt;&gt; ~[1,2,"a"] + ~["b","c"]
+
+(1 2 "a" "b" "c")
+&gt;&gt;&gt; "abc" + "def"
+
+"abcdef"
+&gt;&gt;&gt; "abc" + #\D
+
+"abcD"
+&gt;&gt;&gt; #\A + "bc"
+
+"Abc"
+    </pre>
+    </li>
+    <li class="inText">Binary - subtractes numbers
+    <pre>
+&gt;&gt;&gt; 9-5
+
+4
+    </pre>
+    </li>
+    <li class="inText">Comparison operators &lt;, &gt;, &lt;= and &gt;= are definted for numbers, characters and strings, and have exactly the same sense as corresponding comparisons in Common Lisp
+    <pre>
+&gt;&gt;&gt; #c(1,0) &lt; 1.1
+
+T
+&gt;&gt;&gt; #\a &gt; #\b
+
+NIL
+&gt;&gt;&gt; "ab" &lt;= "bb"
+
+0
+    </pre>
+    </li>
+    <li class="inText">== is an equality operator. It compares numbers properly
+    <pre>
+&gt;&gt;&gt; #c(1,0) == 1
+
+T
+    </pre>
+    it compares characters
+    <pre>
+&gt;&gt;&gt; #\a == #\A
+
+NIL
+    </pre>
+    it compares strings in a case-sensitive manner
+    <pre>
+&gt;&gt;&gt; "abc" == "aBc"
+
+NIL
+    </pre>
+    simple containers (vectors, lists and hash-tables) are compared by their content
+    <pre>
+&gt;&gt;&gt; [] == []
+
+T
+&gt;&gt;&gt; [1] == [2,3]
+
+NIL
+&gt;&gt;&gt; ~[2,3,["a","b"]] == ~[2,3,["a","b"]]
+
+T
+&gt;&gt;&gt; {"a"->1, "b"->2} == {"a"->1, "b"->2}
+
+T
+    </pre>
+    in all other cases, equality is done as by Common Lisp function eq()
+    <pre>
+&gt;&gt;&gt; [] == ~[]
+
+NIL
+    </pre>
+    </li>
+    <li class="inText">!= is an inequality operator. For most of the cases it is a negation of an equality.
+    <pre>
+&gt;&gt;&gt; #\a != #\A
+
+T
+    </pre>
+    It could've been implemented as a macro, but, potentially, there might be cases, where it is simplier to write an inequality method and define equality as a negation of inequality.
+    <pre>
+    </pre>
+    </li>
+    <li class="inText">and (&amp;), xor (^) and or (|) are respective logical operations except when applied to bit-vectors, in which case they are bitwise operations
+    <pre>
+&gt;&gt;&gt; 1 and nil
+
+NIL
+&gt;&gt;&gt; 1 xor nil
+
+T
+&gt;&gt;&gt; nil or 2
+
+2
+&gt;&gt;&gt; #*000111 &amp; #*001011
+
+#*000011
+&gt;&gt;&gt; #*000111 ^ #*001011
+
+#*001100
+&gt;&gt;&gt; #*000111 | #*001011
+
+#*001111
+    </pre>
+    </li>
+    <li class="inText">&lt;&lt; is an insertion operator. It inserts its right hand side operand into its left hand side operand, and returns left hand side. This operation is defined on vectors, lists and streams.
+    <pre>
+&gt;&gt;&gt; a=[]
+
+#()
+&gt;&gt;&gt; eq((a &lt;&lt; 1 &lt;&lt; 2 &lt;&lt; "a"),a)
+
+T
+&gt;&gt;&gt; a
+
+#(1 2 "a")
+&gt;&gt;&gt; eq(cout() &lt;&lt; "string" &lt;&lt; #\Space &lt;&lt; #\A &lt;&lt; #\Newline
+...    cout())
+string A
+
+T
+    </pre>
+    </li>
+    <li class="inText">@ is an operand for use in returning and accepting multiple values
+    <pre>
+&gt;&gt;&gt; a @ b = floor(9,2)
+
+4  ;
+1
+&gt;&gt;&gt; "a=~D, b=~D" % [a,b]
+
+"a=4, b=1"
+    </pre>
+    </li>
+    <li class="inText">= is an assignment operator. It is translated into macro setf. So, entire machinary of generalized variables is accessible through use of =.
+    <pre>
+&gt;&gt;&gt; a = {"a"->0, "b"->0}
+
+#S(HASH-TABLE EQUAL ("b" . 0) ("a" . 0))
+&gt;&gt;&gt; a["a"] = 1
+
+1
+&gt;&gt;&gt; a
+
+#S(HASH-TABLE EQUAL ("b" . 0) ("a" . 1))
+    </pre>
+    </li>
+    <li class="inText">+=, -=, *= and /= are interpretered as macros that perform the first operation (+, -, * or /) between left and right operands, and assign result of the operation to the left side.
+    <pre>
+&gt;&gt;&gt; a = 0
+
+0
+&gt;&gt;&gt; a += 5
+
+5
+&gt;&gt;&gt; a
+
+5
+    </pre>
+    </li>
+</ul>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="ScopeOfVars">Scope of Variables</a></h2>
+
+<p>
+TwinLisp is a Common Lisp internally. As such there are both <a class="inText" href="http://www.supelec.fr/docs/cltl/clm/node43.html">lexical and dynamical variables</a> in it. All CL rules apply. But as a translator, TwinLisp saves you some typing be inserting &quot;<a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_letcm_letst.html">let</a>&quot; clauses in non-top level of code blocks. So, TwinLisp implicitly defines lexical variables in non-top levels. Take a look:
+</p>
+<pre>
+&gt;&gt;&gt; progn {
+...     a = 0
+...     a+5 }
+
+5
+&gt;&gt;&gt; &amp;+
+
+(PROGN (LET (A) (SETF A 0) (_+_ A 5)))
+</pre>
+<p>
+&quot;let&quot; construct is inserted, and it goes as far possible, i.e. till the end of a block.
+</p>
+<p>
+&quot;let&quot; definition is used only for variables that are assigned to, and only if a variable hasn't been assigned before in the same or upper levels (with exception of function and macro definitions).
+</p>
+<pre>
+&gt;&gt;&gt; progn {
+...     a = 0
+...     progn {
+...         b = 1
+...         a = b+2
+...         a }}
+
+3
+&gt;&gt;&gt; &amp;+
+
+(PROGN (LET (A) (SETF A 0) (PROGN (LET (B) (SETF B 1) (SETF A (_+_ B 2)) A))))
+</pre>
+<p>
+&quot;let&quot; construct is never used on variables that have a package name qualifier.
+</p>
+<p>
+In a top level, no &quot;let&quot; constructs are inserted, and a result is governed by the behaviour of a setf macro, which should create a new special variable, if no proper variable exist.
+</p>
+<p>
+Implicit addition of definition of lexical variables can be turned off and on (it is &quot;on&quot; be default) by use of a TwinLisp directive:
+</p>
+<pre>
+&gt;&gt;&gt; lexscope explicit
+&gt;&gt;&gt; progn {
+...     a = 0
+...     a+5 }
+SYNTAX ERROR:
+Assignment to unknown variable 'a'. You have to use 'let'-type constructs, or declare variable global.
+&gt;&gt;&gt; let (a,b=0) {
+...     a = 3
+...     a+b }
+
+3
+&gt;&gt;&gt; lexscope implicit
+&gt;&gt;&gt; progn {
+...     a = 0
+...     a+5 }
+
+5
+</pre>
+<p>
+TwinLisp has a &quot;let&quot; construct, as you've seen it in above example, and &quot;lets&quot; construct, which is &quot;let*&quot; in CL.
+</p>
+<p>
+In TwinLisp one can define variable, parameter and constant by use of macros var, param and const, which are the same as defvar, devparameter and defconstant, they are just shorter to spell.
+</p>
+<p>
+One more important point is that, inside of a macro definition lexscope is explicit by default. So, the most probable place for use of &quot;let&quot; constructs will be inside of macro definitions.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="DefFuncsMacs">Defining Functions and Macros</a></h2>
+
+<p>
+Defining functions, macros and methods is a very common thing, so there are TwinLisp structures that aid this task. As it is in Common Lisp, in TwinLisp we have <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_lambda.html">lambda</a>:
+</p>
+<pre>
+&gt;&gt;&gt; lambda (a,b) {
+...     a+b }
+
+#&lt;CLOSURE :LAMBDA (A B) (_+_ A B)&gt;
+</pre>
+<p>
+If a lambda list needs to be empty, it can be omitted:
+</p>
+<pre>
+&gt;&gt;&gt; lambda { cout &lt;&lt; "Hello, lambda-world!" }
+
+#&lt;CLOSURE :LAMBDA NIL (_&lt;&lt;_ COUT "Hello, lambda-world!")&gt;
+</pre>
+<p>
+There can be optional parameters:
+</p>
+<pre>
+&gt;&gt;&gt; lambda (a,b=2006) { a+b }
+
+#&lt;CLOSURE :LAMBDA (A &amp;OPTIONAL (B 2006)) (_+_ A B)&gt;
+&gt;&gt;&gt; lambda (a,b=2006=?bPresent) { a+b }
+
+#&lt;CLOSURE :LAMBDA (A &amp;OPTIONAL (B 2006 BPRESENT)) (_+_ A B)&gt;
+&gt;&gt;&gt; lambda (a,b=?bPresent) { a+b }
+
+#&lt;CLOSURE :LAMBDA (A &amp;OPTIONAL (B NIL BPRESENT)) (_+_ A B)&gt;
+&gt;&gt;&gt; lambda (a,&amp;&amp;optional b) { a+b }
+
+#&lt;CLOSURE :LAMBDA (A &amp;OPTIONAL B) (_+_ A B)&gt;
+</pre>
+<p>
+We can have key parameters:
+</p>
+<pre>
+&gt;&gt;&gt; lambda (a,:b-&gt;b) { a+b }
+
+#&lt;CLOSURE :LAMBDA (A &amp;KEY ((:B B))) (_+_ A B)&gt;
+&gt;&gt;&gt; lambda (a,:b-&gt;b=2006) { a+b }
+
+#&lt;CLOSURE :LAMBDA (A &amp;KEY ((:B B) 2006)) (_+_ A B)&gt;
+&gt;&gt;&gt; lambda (a,:b-&gt;b=2006=?bPresent) { a+b }
+
+#&lt;CLOSURE :LAMBDA (A &amp;KEY ((:B B) 2006 BPRESENT)) (_+_ A B)&gt;
+&gt;&gt;&gt; lambda (a,:b-&gt;b=?bPresent) { a+b }
+
+#&lt;CLOSURE :LAMBDA (A &amp;KEY ((:B B) NIL BPRESENT)) (_+_ A B)&gt;
+&gt;&gt;&gt; lambda (a,&amp;&amp;key b) { a+b }
+
+#&lt;CLOSURE :LAMBDA (A &amp;KEY B) (_+_ A B)&gt;
+</pre>
+<p>
+We may have rest parameter:
+</p>
+<pre>
+&gt;&gt;&gt; lambda (a,*b) {
+...     for (elem,b) (a) { a += elem }}
+
+#&lt;CLOSURE :LAMBDA (A &amp;REST B) (TL-FOR (ELEM B) (A) (_+=_ A ELEM))&gt;
+&gt;&gt;&gt; lambda (a,&amp;&amp;rest b) {
+...     for (elem,b) (a) { a += elem }}
+
+#&lt;CLOSURE :LAMBDA (A &amp;REST B) (TL-FOR (ELEM B) (A) (_+=_ A ELEM))&gt;
+</pre>
+<p>
+Lambda list will also admit &amp;&amp;allow-other-keys and &amp;&amp;aux parameters.
+</p>
+<p>
+To define functions we use def structure (it does what <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defun.html">defun</a> does in CL):
+</p>
+<pre>
+&gt;&gt;&gt; def foo (a,b=2006) { a+b }
+
+FOO
+</pre>
+<p>
+All rules that we showed for lambda are applicable for def.
+</p>
+<p>
+To define macros we use mac, which is much similar to def (due to similarity of <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defmacro.html">defmacro</a> and defun):
+</p>
+<pre>
+&gt;&gt;&gt; mac boo (a,b) { `foo($a,$b) }
+
+BOO
+</pre>
+<p>
+Macros' lambda lists are allowed to have inner lambda lists. To write an inner lambda list, so that its brackets are not confused with anything else, we use a dot in front of an inner list:
+</p>
+<pre>
+&gt;&gt;&gt; mac boo (a, .(b,c)) { `(foo($a,$b)+$c) }
+
+BOO
+&gt;&gt;&gt; &amp;+
+
+(DEFMACRO BOO (A (B C)) `(_+_ (FOO ,A ,B) ,C))
+</pre>
+<p>
+Macros' lambda lists may have other parameters than functions'. But one parameter is used more often then others, so that there is a special syntax for it:
+</p>
+<pre>
+&gt;&gt;&gt; mac &amp;infinite-loop (**body) {
+...     `do () { $@body }}
+
+INFINITE-LOOP
+&gt;&gt;&gt; &amp;+
+
+(DEFMACRO INFINITE-LOOP (&amp;BODY BODY) `(DO NIL (NIL) ,@BODY))
+</pre>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="CallFuncMacs">Calling Functions and Macros</a></h2>
+
+<p>
+Calling functions, macros and methods is done like in other languages:
+</p>
+<pre>
+&gt;&gt;&gt; def foo (a,b=2006) { a+b }
+
+FOO
+&gt;&gt;&gt; foo(330)
+
+2336
+&gt;&gt;&gt; foo(2,2)
+
+4
+&gt;&gt;&gt; def boo (a,:b-&gt;b=2006) { a+b }
+
+BOO
+&gt;&gt;&gt; boo(330)
+
+2336
+&gt;&gt;&gt; boo(2,:b=2)
+
+4
+</pre>
+<p>
+Notice how value is assigned to key parameter using =. Under the surface, it is translated into:
+</p>
+<pre>
+&gt;&gt;&gt; &amp;+
+
+(BOO 2 :B 2)
+</pre>
+<p>
+To call macros that require inner lambda lists, we need similar inner list in the call:
+</p>
+<pre>
+&gt;&gt;&gt; mac boo (a, .(b,c)) { `(foo($a,$b)+$c) }
+
+BOO
+&gt;&gt;&gt; boo(1,2,3)
+ERROR: The macro BOO may not be called with 3 arguments: (BOO 1 2 3)
+&gt;&gt;&gt; boo(1,.(2,3))
+
+6
+</pre>
+<p>
+Now, many macros define new control structures in which chunks of code should be placed. The round brackets for a function call will be inconvenient for it. Moreover, user defined control structures should look like official structures, where code is usually placed in braces ( {} ). This structures outline new code levels, which should be taken into account be the mechanism that takes care of implicit lexical variables. All of this begs for having a second complementary way to call macros, funcs, etc. It is done by using braces instead of round brackets. Let's illustrate it with what you might have thought to be a special TL structure:
+</p>
+<pre>
+&gt;&gt;&gt; progn {
+...     a=2
+...     a**5 }
+
+32
+&gt;&gt;&gt; &amp;+
+
+(PROGN (LET (A) (SETF A 2) (_**_ A 5)))
+</pre>
+<p>
+For TwinLisp progn is the same as foo above, i.e. it is not a special structure. So, previous numerous examples already illustrate this second way of calling functions (macros, methods).
+</p>
+<p>
+The two ways can be combined by first using round brackets, and later -- braces. This combines use of = in round brackets with having a real code block in braces. This combination will fit into very common macro call:
+</p>
+<pre>
+&gt;&gt;&gt; mac foo(a,**body) { `if ($a) { $@body }}
+
+FOO
+&gt;&gt;&gt; foo(t){
+...     a = 1
+...     b = 3
+...     5**b-a }
+
+124
+&gt;&gt;&gt; foo(nil){
+...     a = 1
+...     b = 3
+...     5**b-a }
+
+NIL
+</pre>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="SlotAndMethCall"></a>Calling Methods and Accessing Objects' Slots</h2>
+
+<p>
+Languages like Python and Java have objects, and they have a convenient way of calling objects' methods. For example in Python have:
+</p>
+<pre>
+&gt;&gt;&gt; 4 . __str__()
+'4'
+</pre>
+<p>
+Same can be done in TwinLisp, except that in Common Lisp methods do not belong to classes, and in Python (Java) methods belong to a class of an object before the dot. So, reasoning for having a dot notation in lisp should be a little different. Fortunately, the rescue idea comes from an analogy of how Python methods are written:
+</p>
+<pre>
+&gt;&gt;&gt; class foo:
+...     def showA(self):
+...             return self.a
+...
+</pre>
+<p>
+So, we say that if an object is followed by a dot and a function call, this object has to be the first argument of a call. Take a look:
+</p>
+<pre>
+&gt;&gt;&gt; a = ~[1,2,3]
+
+(1 2 3)
+&gt;&gt;&gt; a.cdr()
+
+(2 3)
+&gt;&gt;&gt; &amp;+
+
+(CDR A)
+&gt;&gt;&gt; a.append("s")
+
+NIL
+&gt;&gt;&gt; &amp;+
+
+(TL-APPEND A "s")
+</pre>
+<p>
+In this manner it will be convenient to call methods on objects.
+</p>
+<p>
+TwinLisp uses the same dot notation to access objects' slots:
+</p>
+<pre>
+&gt;&gt;&gt; class foo {
+...     a {:initform="slot a"}},
+
+#&lt;STANDARD-CLASS FOO&gt;
+&gt;&gt;&gt; obj = foo.new()
+
+#&lt;FOO #x203F95BE&gt;
+&gt;&gt;&gt; obj.a
+
+"slot a"
+&gt;&gt;&gt; obj.a = 2
+
+2
+&gt;&gt;&gt; obj.a
+
+2
+&gt;&gt;&gt; &amp;+
+
+(SLOT-VALUE OBJ 'A)
+</pre>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="Shortcuts">Shortcuts</a></h2>
+
+<p>
+Common Lisp system uses the fact that forms can be treated as a code, which requires execution, or as a data. Transitions between code and data are simple in Common Lisp, because it has shortcuts like quote and a backquote. These are reader macros under the surface. But for our purposes, these are shortcuts, which act almost like some operators that are applied always to the following form.
+</p>
+<p>
+TwinLisp is a translator, and it basically stands on the way of reader macros. So, if TwinLisp is unaware of a macro character, it will not be treated correctly, since reader macros use special characters, that may have a different sense for TL.
+</p>
+<p>
+TL recognizes the following shortcuts, which are translated into corresponding CL shortcuts:
+</p>
+<table class="operators">
+    <tr>
+        <th>TL shortcut</th>
+        <th>CL shortcut</th>
+    </tr>
+    <tr>
+        <td>'</td>
+        <td>'</td>
+    </tr>
+    <tr>
+        <td>#'</td>
+        <td>#'</td>
+    </tr>
+    <tr>
+        <td>`</td>
+        <td>`</td>
+    </tr>
+    <tr>
+        <td>$</td>
+        <td>,</td>
+    </tr>
+    <tr>
+        <td>$@</td>
+        <td>,@</td>
+    </tr>
+    <tr>
+        <td>#.</td>
+        <td>#.</td>
+    </tr>
+</table>
+<p>
+The use of shortcuts is the same as in CL. For example,
+</p>
+<pre>
+&gt;&gt;&gt; funcall( #'+ ,2,2)
+
+4
+&gt;&gt;&gt; &amp;+
+
+(FUNCALL #'_+_ 2 2)
+&gt;&gt;&gt; a=~[1,2]
+
+(1 2)
+&gt;&gt;&gt; 'car.funcall(a)
+
+(FUNCALL CAR A)
+&gt;&gt;&gt; &amp;+
+
+'(FUNCALL CAR A)
+&gt;&gt;&gt; (#'car).funcall(a)
+
+1
+&gt;&gt;&gt; &amp;+
+
+(FUNCALL #'CAR A)
+&gt;&gt;&gt; `list(a,$a)
+
+(LIST A (1 2))
+&gt;&gt;&gt; &amp;+
+
+`(LIST A ,A)
+&gt;&gt;&gt; `list(a,$@a)
+
+(LIST A 1 2)
+&gt;&gt;&gt; &amp;+
+
+`(LIST A ,@A)
+</pre>
+<p>
+The most common place for these shorcuts will be macro definitions. When I started writting TwinLisp, I thought that this syntax won't be as efficient as pure lisp for writting macros. To check it, I've compiled a <a class="inText" href="CL-TwLisp comparison.txt">file</a> with comparisons of randomly chosen macros from well known sources with their analogs in TwinLisp. The result shows that writting a macro in TL is just as difficult (or simple) as it is in CL. One does not need brackets of a CL syntax to have macros, but one does need shortcuts. This means that languages like Python do not need a great change in syntax to accommodate true macros -- a small addition of shortcuts will do the trick.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="CLForms">Common Lisp Forms (S-expressions)</a></h2>
+
+<p>
+TwinLisp can use all Common Lisp functions, macros, etc. But some CL macros should be called in a truely lisp way, using forms here and there. Syntax of these macros is created in such a way, that it is convenient to use them in only lisp syntax (s-expessions). For these cases it is convenient to have a syntax for lisp form.
+</p>
+<p>
+Form starts with opening combination ~( and ends with ) .
+</p>
+<pre>
+&gt;&gt;&gt; ~(list,1,2,3+4)
+
+(1 2 7)
+&gt;&gt;&gt; &amp;+
+
+(LIST 1 2 (_+_ 3 4))
+</pre>
+<p>
+Round brackets are used in TL for groupping expression. So, a tild (~) tells when one has a CL form instead of a regular expression.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+    
+<div class="textSection">
+
+<h2><a id="CLCode">Mixing with Common Lisp code</a></h2>
+
+<p>
+It is possible to insert Common Lisp code into TwinLisp code using &quot;#t{&quot; as an opening bracket and &quot;#t}&quot; as a closing one. Inserted in this way code is not touched at all by TL translator.
+</p>
+<pre>
+&gt;&gt;&gt; 1 + #t{ (* 2 3) #t} - 5
+
+2
+&gt;&gt;&gt; &amp;+
+
+(_-_ (_+_ 1 (* 2 3)) 5)
+</pre>
+<p>
+And you can insert TwinLisp code into Common Lisp code between &quot;#t{&quot; and &quot;#t}&quot;. The reader's macro, dispatched on #t will translate all of TwinLisp code and insert it into one big progn.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="StdContainers">Standard Containers</a></h2>
+
+<p>
+TwinLisp follows Python example of using standard containers like list and dictionaries.
+</p>
+<p>
+Python has tuples, lists and dictionaries. Tuples are like lists, but they are immutable. Unfortunately, they lack some list's search methods. Python lists are vectors in terms of implementation (if I am correct). Python dictionaries are hash-tables.
+</p>
+<p>
+Being a lisp, TwinLisp has lists (<a class="inText" href="http://www.supelec.fr/docs/cltl/clm/node147.html">true lists</a>), <a class="inText" href="http://www.supelec.fr/docs/cltl/clm/node30.html">vectors</a> and <a class="inText" href="http://www.supelec.fr/docs/cltl/clm/node154.html">hash-tables</a>. Lists are essential for lisp, so TL has to have them. But in some cases it is more convenient to operate with adjustable vectors, so these have to be standard as well. Hash-tables should have a proper place in TL, too.
+</p>
+<p>
+Now, to create a list, one can use standard CL function <a class="inText" href="http://www.lisp.org/HyperSpec/Body/fun_listcm_listst.html">list</a>(), or use ~[...] notation:
+</p>
+<pre>
+&gt;&gt;&gt; list(1,2,"a",#\b)
+
+(1 2 "a" #\b)
+&gt;&gt;&gt; &amp;type-of(lst)
+
+CONS
+&gt;&gt;&gt; lst = ~[1,2,"a",#\b ]
+
+(1 2 "a" #\b)
+&gt;&gt;&gt; &amp;type-of(lst)
+
+CONS
+</pre>
+<p>
+To create an adjustable vector, one can use TL function &amp;_make-vector_(), or use [...] notation:
+</p>
+<pre>
+&gt;&gt;&gt; vec = &amp;_make-vector_(:initContent=~[1,2,"a",#\b ]
+...                      :elemType=t)
+
+#(1 2 "a" #\b)
+&gt;&gt;&gt; &amp;type-of(vec)
+
+(VECTOR T 4)
+&gt;&gt;&gt; vec = [1,2,"a",#\b ]
+
+#(1 2 "a" #\b)
+&gt;&gt;&gt; &amp;type-of(vec)
+
+(VECTOR T 4)
+</pre>
+<p>
+Notice that TL does not use round brackets to create containers. This removes possible confusion.
+</p>
+<p>
+To create a hash-table, one can use TL function &amp;_make-hash-table_(), or use {...} notation:
+</p>
+<pre>
+&gt;&gt;&gt; ht = &amp;_make-hash-table_ ("a",1,"b",2,"c",3)
+
+#S(HASH-TABLE EQUAL ("c" . 3) ("b" . 2) ("a" . 1))
+&gt;&gt;&gt; ht = {"a"->1, "b"->2, "c"->3}
+
+#S(HASH-TABLE EQUAL ("c" . 3) ("b" . 2) ("a" . 1))
+</pre>
+<p>
+Notice that a hash-table uses test equal.
+</p>
+<p>
+To retrieve or set an element in a container by index or a key, TL uses Python [...] notation, which is translated into TL generic function _getitem_() or a setter _getitem_():
+</p>
+<pre>
+&gt;&gt;&gt; lst[0]
+
+1
+&gt;&gt;&gt; lst[2]
+
+"a"
+&gt;&gt;&gt; vec[0]
+
+1
+&gt;&gt;&gt; vec[0] = 78
+
+78
+&gt;&gt;&gt; vec[0]
+
+78
+&gt;&gt;&gt; ht["a"]
+
+1  ;
+T
+&gt;&gt;&gt; ht["xyz"] = 8776
+
+8776
+&gt;&gt;&gt; ht["xyz"]
+
+8776  ;
+T
+</pre>
+<p>
+Notice that on a hash-table _getitem_() returns two values -- element or nil, and a success value of operation. The following are behaviours when a wrong index or a key is given:
+</p>
+<pre>
+&gt;&gt;&gt; vec[7]
+ERROR: Method _getitem_ is called on sequence with out-of-range integer index
+&gt;&gt;&gt; lst[7]
+ERROR: Method _getitem_ is called on sequence with out-of-range integer index
+&gt;&gt;&gt; ht["no-such-key"]
+
+NIL  ;
+NIL
+</pre>
+<p>
+Let's get a type of an error that vectors generate:
+</p>
+<pre>
+&gt;&gt;&gt; handle { vec[7] }
+... cond error (er) { &amp;type-of(er) },
+
+INDEX-ERROR
+</pre>
+<p>
+With []'s one can do slicing:
+</p>
+<pre>
+&gt;&gt;&gt; vec[->3]
+
+#(78 2 "a")
+&gt;&gt;&gt; vec[1->3]
+
+#(2 "a")
+&gt;&gt;&gt; vec[1->,2]
+
+#(2 #\b)
+&gt;&gt;&gt; vec[1->4,2]
+
+#(2 #\b)
+</pre>
+<p>
+The [...] notation is translated into _getitem_() call in two ways. If a combination -> is present, then forms in [] tell about slicing, and the format is then x[start->end,step], where at least one of start or end should be present. If there are no -> combination, then all elements in []'s are passed to _getitem_(). In this way, it is convenient to use multidimensional arrays:
+</p>
+<pre>
+&gt;&gt;&gt; arr = &amp;make-array('~(2,2)
+...                   :&amp;initial-contents ='~(~(1,2)
+...                                          ~(3,4)))
+
+#2A((1 2) (3 4))
+&gt;&gt;&gt; arr[0,1]
+
+2
+&gt;&gt;&gt; arr[0,1] = 45
+
+45
+&gt;&gt;&gt; arr[0,1]
+
+45
+</pre>
+<p>
+TwinLisp defines some other common to containers methods:
+</p>
+<ul class="inText">
+    <li class="inText">index(sequence,obj) -- return an index of a first occurance of obj in a sequence. To get correct object, it uses TL's equality (==). nil is return if obj is not present in the sequence.
+    <pre>
+&gt;&gt;&gt; lst.index("a")
+
+2
+    </pre>
+    </li>
+    <li class="inText">count(sequence,obj) -- returns a number of times obj appears in the sequence.
+    <pre>
+&gt;&gt;&gt; lst.count("c")
+
+0
+    </pre>
+    </li>
+    <li class="inText">append(sequence,*elems) -- is defined for lists and vectors. Append destructively appends a given sequence with elems.
+    <pre>
+&gt;&gt;&gt; lst
+
+(1 2 "a" #\b)
+&gt;&gt;&gt; lst.append(34,78,~[],[])
+
+NIL
+&gt;&gt;&gt; lst
+
+(1 2 "a" #\b 34 78 NIL #())
+    </pre>
+    </li>
+    <li class="inText">extend(sequence,*seqs) -- is defined for list and vectors. Extend destructively appends a given sequence with elements from given sequences (seqs).
+    <pre>
+&gt;&gt;&gt; lst.extend(~[1,2],~[3,4],[5,6])
+
+NIL
+&gt;&gt;&gt; lst
+
+(1 2 "a" #\b 34 78 NIL #() 1 2 3 4 5 6)
+    </pre>
+    </li>
+    <li class="inText">insert(sequence,index,obj) -- is defined for list and vectors. Destructively inserts obj into position given by index.
+    <pre>
+&gt;&gt;&gt; lst.insert(5,"Bob")
+
+NIL
+&gt;&gt;&gt; lst
+
+(1 2 "a" #\b 34 "Bob" 78 NIL #() 1 2 3 4 5 6)
+    </pre>
+    </li>
+    <li class="inText">pop(container [,index]) -- is defined for list, vectors and hash-tables. Returns an element named by index and destructively removes it from a container.
+    <pre>
+&gt;&gt;&gt; lst.pop(5)
+
+"Bob"
+&gt;&gt;&gt; lst
+
+(1 2 "a" #\b 34 78 NIL #() 1 2 3 4 5 6)
+&gt;&gt;&gt; lst.pop()
+
+6
+&gt;&gt;&gt; lst
+
+(1 2 "a" #\b 34 78 NIL #() 1 2 3 4 5)
+    </pre>
+    </li>
+    <li class="inText">remove(container,obj) -- is defined for list and vectors. Returns an index of a first occurance of an obj in the sequence and destructively removes it.
+    <pre>
+&gt;&gt;&gt; lst.remove(nil)
+
+6
+&gt;&gt;&gt; lst
+
+(1 2 "a" #\b 34 78 #() 1 2 3 4 5)
+    </pre>
+    </li>
+    <li class="inText">iter(container [,step]) -- is defined for list, vectors and hash-tables. Returns an iterator. This method is implicitly used in the for loop.
+    <pre>
+&gt;&gt;&gt; for (elem,lst) { cout() &lt;&lt; "~A - " % ~[elem] }
+1 - 2 - a - b - 34 - 78 - #() - 1 - 2 - 3 - 4 - 5 -
+NIL
+&gt;&gt;&gt; for (elem,lst.iter(2)) { cout() &lt;&lt; "~A - " % ~[elem] }
+2 - b - 78 - 1 - 3 - 5 -
+NIL
+    </pre>
+    </li>
+</ul>
+<p>
+One point should be mentioned here. Empty list is nil, which means nothing. Nothing has no structure. Destructive function mentioned above will not work on nil, since it has no inner structure to change.
+</p>
+<pre>
+&gt;&gt;&gt; ~[].append(1,2)
+ERROR: Method extend should not be called on null list
+</pre>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="CtrlFlowStruct">Control Flow Structures</a></h2>
+
+<p>
+There are many control flow macros and functions in Common Lisp, such as do, loop, cond, etc. Some are used more often then others, and TwinLisp provides special constructs to ease the use of most common control flow manipulations.
+</p>
+<p>
+When describing syntactic structures we will use square brackets with following meanings: [...] will indicate that whatever is in brackets may appear one or zero times, [...]* will indicate that whatever is in brackets may appear any number of times, and [...]+ will indicate that whatever is in brackets should appear one or more times. Character | will separate alternatives.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="IFs">IFs</a></h3>
+
+<p>
+The most used structures is if-elif-else:
+</p>
+<pre>
+   if (condition1) { body1 }
+ [ elif (conditionN) { bodyN } ]*
+ [ else { else-body } ]
+</pre>
+<p>
+When condition1 is true (t), then body1 is executed. If condition1 is nil, condition2 is checked, etc. If no condition is true, the else-body is executed. The return result is the value returned by the last expression from the executed body. If no body executed, nil is returned. Under the hood, if-elif-else structure is translated into <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_cond.html">cond</a>.
+</p>
+<p>
+A small modification of if-elif-else is case:
+</p>
+<pre>
+   case (expression)
+ [ is (value-expression1N [,value-expressionMN]*) { bodyN } ]*
+ [ else { else-body } ]
+</pre>
+<p>
+Expression is executed once and the result is compared (with TL ==) to results of value-expressions evaluations. When values are equal, corresponding body is executed. If no match is found, else-body is executed, if present. The return result is the value of the last expression inside of evaluated body. If no body executed, nil is returned. Under the hood, case is a macro over cond.
+</p>
+<p>
+For cases when value-expressions do not have to be evaluated and comparison can be done with eql (this is a CL's case macro), one should use comcase (<a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_casecm_ccasecm_ecase.html">Common Lisp case</a>):
+</p>
+<pre>
+   comcase (expression)
+ [ is (value1N [,valueMN]*) { bodyN } ]*
+ [ else { else-body } ]
+</pre>
+<p>
+Like CL, TwinLisp has <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_typecasec_cm_etypecase.html">typecase</a>:
+</p>
+<pre>
+   typecase (obj)
+ [ is (typeN) { bodyN } ]*
+</pre>
+<p>
+If the same body should correspond to several types, one should use, like in CL, &amp;or(type1,type2,...) inside is-clause.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="Loops">Loops</a></h3>
+
+<p>
+TwinLisp uses do loop:
+</p>
+<pre>
+   do ( [var [= initValue [-> stepValue] ] ]* )
+    [ ( [end-test [,result-expressions]* ] ) ]
+      { [declaration]*
+        [ tag | expression ]* }
+</pre>
+<p>
+The do loop is a Common Lisp <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_docm_dost.html">do loop</a>. Var is a variable used in the body of the loop with optional initValue and optional stepValue. When end-test is t (true), loop exists with the result of evaluation of result-expressions. If no result-expressions given, the return value is nil. A body of a do loop is a <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_tagbody.html">tagbody</a>, so, tags can be used inside with <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_go.html">go</a>().
+</p>
+<p>
+The do loop is also an implicit <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_block.html">block</a> named nil. To break out of this block one uses a break statement
+</p>
+<pre>
+   break [ from block-name ] [ result ]
+</pre>
+<p>
+This statement can be used with different blocks by use of option from. When from is absent, the block-name defaults to nil. Result is optional, and it also defaults to nil.
+</p>
+<p>
+Common Lisp has a simple to use <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_dolist.html">dolist loop</a>. Python has a very similar for loop, but it can be used on other containers (tuples, etc.). In TwinLisp containers are expected to have iterators, which are implicitly used by a for loop, like in Python. But TL's loop allows definitions of other variables that might be used in iteration (similar to do loop's definitions):
+</p>
+<pre>
+   for ( var, container [,varN [= initValue [-> stepValue] ] ]* )
+     [ ( [result-expressions]* ) ]
+       { [declaration]*
+         [ tag | expression ]* }
+</pre>
+<p>
+Unlike Python and Java, there is no continue statement to use in loops. The effect of a continue statement can be created by use of an end tag and go().
+</p>
+<p>
+Very similar to for loop is times loop.
+</p>
+<pre>
+   times ( var, maxValue [,varN [= initValue [-> stepValue] ] ]* )
+     [ ( [result-expressions]* ) ]
+       { [declaration]*
+         [ tag | expression ]* }
+</pre>
+<p>
+During the iteration var is bound to integer, starting from zero to the highest integer, which is less than maxValue. This loop is much like CL's <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_dotimes.html">dotimes loop</a>.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="BlockAndProg">Block and Prog</a></h3>
+
+<p>
+Like Common Lisp, TwinLisp <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_block.html">block</a> structure:
+</p>
+<pre>
+   block [block-name] { body }
+</pre>
+<p>
+If no block-name is given, it will be named nil be default. An early lexical exit from a block is performed by break statement, mentioned <a class="crossSelfRef" href="#Loops">before</a>.
+</p>
+<p>
+TwinLisp also provides a syntax structure for <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_progcm_progst.html">prog</a>:
+</p>
+<pre>
+   prog [ ( [var [=initValue] ]* ) ] { body }
+</pre>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="DynExits">Dynamic Exits</a></h3>
+
+<p>
+Common Lisp has to ways to perform dynamic exists. One way is via <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_throw.html">throw</a>-ing and <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_catch.html">catch</a>-ing some object. Another is by <a class="inText" href="http://www.supelec.fr/docs/cltl/clm/node335.html">signal</a>-ing conditions.
+</p>
+<p>
+To throw an object, one should use statement throw:
+</p>
+<pre>
+   throw tag [ result ]
+</pre>
+<p>
+If result is omitted, it defaults to nil.
+</p>
+<p>
+To execute expressions while anticipating to catch a tag, use catch structure:
+</p>
+<pre>
+   catch tag { body }
+</pre>
+<p>
+Signaling conditions and errors in TwinLisp is performed by usual CL functions <a class="inText" href="http://www.lisp.org/HyperSpec/Body/fun_error.html">error</a>(), <a class="inText" href="http://www.lisp.org/HyperSpec/Body/fun_cerror.html">cerror</a>() and <a class="inText" href="http://www.lisp.org/HyperSpec/Body/fun_signal.html">signal</a>(). To handle conditions that may arise during execution of some expressions, one should use handle structure:
+</p>
+<pre>
+   handle { body }
+ [ cond condition-type [ (var) ] { condition-body } ]*
+</pre>
+<p>
+When execution of a body signals a condition, condition's type is checked against all given condition-types. When types match, an appropriate condition-body is executed with optional var bound to a signaled condition object.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="StructsAndClasses">Structs and Classes</a></h2>
+
+<p>
+TwinLisp uses special syntax to define <a class="inText" href="http://www.supelec.fr/docs/cltl/clm/node168.html">structures</a>:
+</p>
+<pre>
+   struct name
+       {  [slot [ {initValue [,option=value]* } ] ]*  }
+    [ options { [option=value]* } ]
+</pre>
+<p>
+Struct is translated into <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defstruct.html">defstruct</a>. Options for each slot and for structure as a whole are exactly the same as the ones for <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defstruct.html">defstruct</a>.
+</p>
+<p>
+Defining a <a class="inText" href="http://www.supelec.fr/docs/cltl/clm/node263.html">class</a> is very similar:
+</p>
+<pre>
+   class name [ ( [superclass]* ) ]
+       {  [slot [ {initValue [,option=value]* } ] ]*  }
+    [ options { [option=value]* } ]
+</pre>
+<p>
+Class is translated into <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defclass.html">defclass</a>. Options for each slot and for a class as a whole are exactly the same as the ones for <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defclass.html">defclass</a>.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="DefAndUsePacks">Definition and Use of Packages</a></h2>
+
+<p>
+Common Lisp uses packages to separate symbols, so that name clashes do not occur. Since TwinLisp is a translator on top of CL, it cannot do much to change the way package system works. But TwinLisp can minimize amount of typing.
+</p>
+<p>
+To define a package, TwinLisp uses a syntactic structure &quot;package&quot;:
+</p>
+<pre>
+   package name { [ option { [value]* } ]* }
+</pre>
+<p>
+For example:
+</p>
+<pre>
+&gt;&gt;&gt; package foo {
+...     :&amp;use {"COMMON-LISP","TWINLISP"}
+...     :nicknames {"BOO","BAR"}
+...     :export { "A" }
+...     :documentation {"foo package - example"}}
+
+#&lt;PACKAGE FOO&gt;
+&gt;&gt;&gt; &amp;+
+
+(DEFPACKAGE FOO (:USE "COMMON-LISP" "TWINLISP") (:NICKNAMES "BOO" "BAR")
+(:EXPORT "A") (:DOCUMENTATION "foo package - example"))
+</pre>
+<p>
+TL's package is translated into CL's <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defpackage.html">defpackage</a>, thus, options and their values in package are the same as those in <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defpackage.html">defpackage</a>. Notice that &quot;use&quot; is spelled with &amp; in the beginning. This is due to TwinLisp having a special word &quot;use&quot;, and &amp; makes a distiction between the two (see <a class="crossSelfRef" href="#IdentAndOpers">Identifiers and Operators</a>).
+</p>
+<p>
+To switch between packages, use structure inside:
+</p>
+<pre>
+&gt;&gt;&gt; inside foo
+
+#&lt;PACKAGE FOO&gt;
+&gt;&gt;&gt; a = "a in foo"
+
+"a in foo"
+&gt;&gt;&gt; b = "b" + " in foo"
+
+"b in foo"
+&gt;&gt;&gt; inside "COMMON-LISP-USER"
+
+#&lt;PACKAGE COMMON-LISP-USER&gt;
+&gt;&gt;&gt; &amp;+
+
+(IN-PACKAGE "COMMON-LISP-USER")
+</pre>
+
+<p>
+Suppose, you have defined a package foo with external symbol a and internal b (example above). To use these symbols in another package, you have to either always enter fully qualified names (foo:a and foo::b), or intern a needed symbol into the destination package. Interning a symbol into another package may again produce name clash. Writting a fully qualified name takes a lot of typing. TwinLisp may save you some typing when you use TL directive &quot;use&quot;:
+</p>
+<pre>
+   use [ package[:] ] { [ symbol [= synonym] ]* }
+</pre>
+<p>
+This directive tells TwinLisp to substitute every occurance of synonym with package[:]:symbol. If synonym is not given, then every occurance of symbol will be substituted with package[:]:symbol. Let's try it with our example:
+</p>
+<pre>
+&gt;&gt;&gt; use foo { a }
+&gt;&gt;&gt; a
+
+"a in foo"
+&gt;&gt;&gt; &amp;+
+
+FOO:A
+&gt;&gt;&gt; use foo: { b }
+&gt;&gt;&gt; b
+
+"b in foo"
+&gt;&gt;&gt; &amp;+
+
+FOO::B
+</pre>
+<p>
+Whatever synonyms you define with &quot;use&quot; directive, they will be used inside of the code level, in which it has been defined, and in all sub-levels. For example:
+</p>
+<pre>
+&gt;&gt;&gt; progn {
+...     use foo { a=x }
+...     x }
+
+"a in foo"
+&gt;&gt;&gt; x
+ERROR: EVAL: variable X has no value
+</pre>
+<p>
+With the ability to create synonyms one can use shorter names without interning symbols, which leaves interning for some other better uses.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h2><a id="TLBlocksAndDir">TwinLisp's block structures and directives</a></h2>
+
+<p>
+Every TwinLisp block structure is translated directly into standard common lisp form (it can be a special form, macro or function), or into forms defined by TwinLisp. Since every form in lisp returns some value, all TwinLisp block structures return values. In this way TwinLisp can be used in functional style programing.
+</p>
+<p>
+TwinLisp directives only adjust translator's behaviour. As such, they are not translated into lisp code, and they do not return anything. New translator's behaviour is applicable only on a current and lower code levels.
+</p>
+<p>
+Describing TwinLisp syntactic structures, we will use square brackets, similarly to section &quot;<a class="crossSelfRef" href="#CtrlFlowStruct">Control Flow Structures</a>&quot;: [...] will indicate that whatever is in brackets may appear one or zero times, [...]* will indicate that whatever is in brackets may appear any number of times, and [...]+ will indicate that whatever is in brackets should appear one or more times. Character | will separate alternatives.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLblock">block</a></h3>
+
+<pre>
+   block [ name ] { body }
+</pre>
+<p>
+block is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_block.html">block</a>. If name is omitted, block will be named nil.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLbreak">break</a></h3>
+
+<pre>
+   break [ from block-name ] [ return-value ]
+</pre>
+<p>
+break is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_return-from.html">return-from</a>. If block-name is omitted, nil is assumed. If return-value is omitted, nil is returned.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLcase">case</a></h3>
+
+<pre>
+   case (expression)
+ [ is (value-expression1N [,value-expressionMN]*) { bodyN } ]*
+ [ else { else-body } ]
+</pre>
+<p>
+case is translated into &amp;tl-case macro. Expression is executed once and the result is compared (with TL ==) to results of value-expressions evaluations. When values are equal, corresponding body is executed. If no match is found, else-body is executed, if present. The return result is the value of the last expression inside of evaluated body. If no body executed, nil is returned.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLcatch">catch</a></h3>
+
+<pre>
+   catch tag { body }
+</pre>
+<p>
+catch is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_catch.html">catch</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLclass">class</a></h3>
+
+<pre>
+   class name [ ( [superclass]* ) ]
+       {  [slot [ {initValue [,option=value]* } ] ]*  }
+    [ options {
+         [:&amp;default-initargs { [arg, value]* } ]
+         [option=value]* } ]
+</pre>
+<p>
+class is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defclass.html">defclass</a>. Options for each slot and for a class as a whole are exactly the same as the ones for <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defclass.html">defclass</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLcomcase">comcase</a></h3>
+
+<pre>
+   comcase (expression)
+ [ is (value1N [,valueMN]*) { bodyN } ]*
+ [ else { else-body } ]
+</pre>
+<p>
+comcase is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_casecm_ccasecm_ecase.html">case</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLcond">cond</a></h3>
+
+<pre>
+   cond name [ ( [parent-type]* ) ]
+       {  [slot [ {initValue [,option=value]* } ] ]*  }
+    [ options {
+         [:&amp;default-initargs { [arg, value]* } ]
+         [option=value]* } ]
+</pre>
+<p>
+cond is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_define-condition.html">define-condition</a>. Options for each slot and for a condition as a whole are exactly the same as the ones for <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_define-condition.html">define-condition</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLdef">def</a></h3>
+
+<pre>
+   def [setter] func-name [ ( <em>lambda-list</em> ) ]
+       { [ [declaration]* | documentation-string ]
+         body }
+</pre>
+<p>
+where <em>lambda-list</em> is defined in <a class="crossSelfRef" href="#TLlambda">lambda</a>.
+</p>
+<p>
+When &quot;setter&quot; is present, the actual name of the function created is &quot;(setf func-name)&quot;.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLdefgen">defgen</a></h3>
+
+<pre>
+   defgen [setter] gfunc-name ( <em>lambda-list</em> )
+    [ options { [option=value]*
+                [declaration] } ]
+    [ meth [<em>method-qualifier</em>]* ( <em>specialized-lambda-list</em> )
+        { [ [declaration]* | documentation-string ]
+            meth-body } ]*
+</pre>
+<p>
+where
+</p>
+<pre>
+   <em>lambda-list</em> := [var]*
+                  [ &amp;&amp;optional [var]* ]
+                  [ *var | &amp;&amp;rest [*]var ]
+                  [ [keyword->var]* |
+                    &amp;&amp;key [ [keyword->] var ]* [&amp;&amp;allow-other-keys] ]
+</pre>
+<p>
+defgen is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defgeneric.html">defgeneric</a>. Generic function's options are the same as those in <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defgeneric.html">defgeneric</a>. <em>method-qualifier</em> and <em>specialized-lambda-list</em> are the same as those in <a class="crossSelfRef" href="#TLmeth">meth</a>.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLdo">do</a></h3>
+
+<pre>
+   do ( [var [= initValue [-> stepValue] ] ]* )
+    [ ( [end-test [,result-expressions]* ] ) ]
+      { [declaration]*
+        [ tag | expression ]* }
+</pre>
+<p>
+do is translated into a Common Lisp <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_docm_dost.html">do loop</a>. Var is a variable used in the body of the loop with optional initValue and optional stepValue. When end-test is t (true), loop exists with the result of evaluation of result-expressions. If no result-expressions given, the return value is nil. A body of a do loop is a <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_tagbody.html">tagbody</a>, so, tags can be used inside with <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_go.html">go</a>().
+</p>
+<p>
+The do loop is also an implicit <a class="crossSelfRef" href="#TLblock">block</a> named nil. To break out of this block one uses a <a class="crossSelfRef" href="#TLbreak">break statement</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLdos">dos</a></h3>
+
+<pre>
+   dos ( [var [= initValue [-> stepValue] ] ]* )
+     [ ( [end-test [,result-expressions]* ] ) ]
+       { [declaration]*
+         [ tag | expression ]* }
+</pre>
+<p>
+dos is similar to <a class="crossSelfRef" href="#TLdo">do</a>, except that vars are assigned sequentially. dos is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_docm_dost.html">do*</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLflet">flet</a></h3>
+
+<pre>
+   flet [ [setter] func-name [ (<em>lambda-list</em>) ]
+                    { [ [declaration]* | documentation-string ]
+                        func-body } ]*
+      { flet-body }
+</pre>
+<p>
+Syntax of function definitions inside flet is the same as in <a class="crossSelfRef" href="#TLdef">def</a>
+</p>
+<p>
+flet is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_fletcm_scm_macrolet.html">flet</a>.
+</p>
+<p>
+flet defines local functions, which can be used inside flet-body. New functions cannot call each other and they cannot form recursive groups. If that is desired, use <a class="crossSelfRef" href="#TLlabels">labels</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLfor">for</a></h3>
+
+<pre>
+   for ( var, container [,varN [= initValue [-> stepValue] ] ]* )
+     [ ( [result-expressions]* ) ]
+       { [declaration]*
+         [ tag | expression ]* }
+</pre>
+<p>
+for is translated into &amp;tl-for macro.
+</p>
+<p>
+for is a loop construct based on <a class="crossSelfRef" href="#TLdos">dos</a>. Method iter() is implicitly called on a container, and on each iteration var is consequently bound to elements provided by an iterator. When there no more elements coming from an iterator, iteration is stopped, result-expressions are evaluated, and the value of the last result-expression is returned. If there are no result-expressions, nil is returned.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLgfun">gfun</a></h3>
+
+<pre>
+   gfun ( <em>lambda-list</em> )
+    [ options { [option=value]*
+                [declaration] } ]
+    [ meth [<em>method-qualifier</em>]* ( <em>specialized-lambda-list</em> )
+        { [ [declaration]* | documentation-string ]
+            meth-body } ]*
+</pre>
+<p>
+gfun is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/syscla_generic-function.html">generic-function</a>. gfun is very similar to <a class="crossSelfRef" href="#TLdefgen">defgen</a>, except that it defines an anonymous generic function.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLglabels">glabels</a></h3>
+
+<pre>
+   glabels [  [setter] gfunc-name ( <em>lambda-list</em> )
+            [ options { [option=value]*
+                        [declaration] } ]
+            [ meth [<em>method-qualifier</em>]* ( <em>specialized-lambda-list</em> )
+                { [ [declaration]* | documentation-string ]
+                    meth-body } ]* ]*
+       { glabels-body }
+</pre>
+<p>
+glabels is translated into CL generic-labels.
+</p>
+<p>
+glabels is essentially the same as <a class="inText" href="#TLglet">glet</a>, except that defined functions can call each other.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLglet">glet</a></h3>
+
+<pre>
+   glet [  [setter] gfunc-name ( <em>lambda-list</em> )
+            [ options { [option=value]*
+                        [declaration] } ]
+            [ meth [<em>method-qualifier</em>]* ( <em>specialized-lambda-list</em> )
+                { [ [declaration]* | documentation-string ]
+                    meth-body } ]* ]*
+       { glet-body }
+</pre>
+<p>
+glet is translated into CL generic-flet.
+</p>
+<p>
+Function definitions inside glet are the same as those in <a class="crossSelfRef" href="#TLdefgen">defgen</a>.
+</p>
+<p>
+glet defines local generic functions, which can be used inside glet-body. These functions cannot use each other or form recursive groups (very similar to <a class="crossSelfRef" href="#TLflet">flet</a>). If functions have to use each other, use <a class="crossSelfRef" href="#TLglabels">glabels</a>
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLglobal">global</a></h3>
+
+<pre>
+   global var
+</pre>
+<p>
+global is a TwinLisp's directive. It tells translator that a global variable var will be used, so that it shouldn't be introduced as an implicit lexical variable.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLhandle">handle</a></h3>
+
+<pre>
+   handle { handle-body }
+ [ cond condition-type [ (var) ] { [declaration]*
+                                   condition-body } ]*
+ [ else (<em>lambda-list</em>) { [declaration]*
+                          else-body  } ]
+</pre>
+<p>
+handle is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_handler-case.html">handler-case</a>.
+</p>
+<p>
+If condition is signaled inside handle-body, it will be checked against condition-type's. When condition's type matches, appropriate condition-body is executed. An alternative var in cond clause will be bound to the signaled condition, and available inside condition-body. The result returned is the value of evalution of the last expression within condition-body.
+</p>
+<p>
+If there are no conditions signaled, either the result of evalution of the last expression in handle-body is returned, or, if else clause is present, result of handle-body is passed into <em>lambda-list</em> (it is the same as in <a class="crossSelfRef" href="#TLlambda">lambda</a>), and else-body is evaluated as a lambda function, which result is returned. When else clause is present, one has to make sure that the number of returned results matches the number of parameters that <em>lambda-list</em> can take.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLif">if</a></h3>
+
+<pre>
+   if (condition1) { body1 }
+ [ elif (conditionN) { bodyN } ]*
+ [ else { else-body } ]
+</pre>
+<p>
+if-elif-else structure is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_cond.html">cond</a>. When condition1 is true (t), then body1 is executed. If condition1 is nil, condition2 is checked, etc. If no condition is true, the else-body is executed. The return result is the value returned by the last expression from the executed body. If no body executed, nil is returned. 
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLinside">inside</a></h3>
+
+<pre>
+   inside pack-name
+</pre>
+<p>
+inside is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_in-package.html">in-package</a>.
+</p>
+<p>
+inside switches current package to pack-name. You get &quot;inside&quot; of this package.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLlabels">labels</a></h3>
+
+<pre>
+   labels [ [setter] func-name [ (<em>lambda-list</em>) ]
+                        { [ [declaration]* | documentation-string ]
+                            func-body } ]*
+       { labels-body }
+</pre>
+<p>
+labels is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_fletcm_scm_macrolet.html">labels</a>.
+</p>
+<p>
+labels is essentially the same as <a class="crossSelfRef" href="#TLflet">flet</a>, except that functions can use each other and form recursive groups.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLlambda">lambda</a></h3>
+
+<pre>
+   lambda [ ( <em>lambda-list</em> ) ]
+       { [ [declaration]* | documentation-string ]
+         body }
+</pre>
+<p>
+where
+</p>
+<pre>
+   <em>lambda-list</em> := [var]*
+                  [ [var=initform [=?svar] ]* | [var [=initform] =?svar ]* |
+                    &amp;&amp;optional [var [=initform] [=?svar] ]* ]
+                  [ *rest | &amp;&amp;rest [*]rest ]
+                  [ [ keyword->var [=initform] [=?svar] ]* |
+                    &amp;&amp;key [ [keyword->] var [=initform] [=?svar] ]* 
+                          [ &amp;&amp;allow-other-keys ] ]
+                  [ &amp;&amp;aux [var [=initform] ]* ]
+</pre>
+<p>
+lambda is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_lambda.html">lambda</a>.
+</p>
+<p>
+lambda creates an anonymous function.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLlet">let</a></h3>
+
+<pre>
+   let [ ( [var [=value] ]* ) ]
+       { [declaration]*
+         body }
+</pre>
+<p>
+let is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_letcm_letst.html">let</a>.
+</p>
+<p>
+let creates new lexical variables for use inside the body. Values assigned to new variables cannot use other new variables. If this is needed, use <a class="crossSelfRef" href="#TLlets">lets</a>.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLlets">lets</a></h3>
+
+<pre>
+   lets [ ( [var [=value] ]* ) ]
+        { [declaration]*
+          body }
+</pre>
+<p>
+lets is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_letcm_letst.html">let*</a>.
+</p>
+<p>
+lets is essentially the same as <a class="crossSelfRef" href="#TLlet">let</a>, except that values for new variables can be computed using other variables.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLlexscope">lexscope</a></h3>
+
+<pre>
+   lexscope explicit | lexscope implicit
+</pre>
+<p>
+lexscope is a TL's directive.
+</p>
+<p>
+lexscope explicit turns off implicit introduction of new lexical variables, so that they have to be explicitly introduced by <a class="crossSelfRef" href="#TLlet">let</a>, <a class="crossSelfRef" href="#TLlets">lets</a>, or other ways.
+</p>
+<p>
+lexscope implicit turns on implicit introduction of new lexical variables, i.e. its action is opposite to lexscope explicit.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLmac">mac</a></h3>
+
+<pre>
+   mac mac-name [ ( <em>lambda-list</em> ) ]
+       { [ [declaration]* | documentation-string ]
+         body }
+</pre>
+<p>
+mac is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defmacro.html">defmacro</a>.
+</p>
+<p>
+<em>lambda-list</em> is like one in <a class="crossSelfRef" href="#TLlambda">lambda</a> with few <a class="inText" href="http://www.lisp.org/HyperSpec/Body/sec_3-4-4.html">additions</a>. Options &amp;&amp;whole, &amp;&amp;environment and &amp;&amp;body are accepted. Instead of &quot;&amp;&amp;body var&quot;, one may write shorter &quot;**var&quot;.
+</p>
+<p>
+mac defines macros.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLmaclet">maclet</a></h3>
+
+<pre>
+   maclet [ mac-name [ (<em>lambda-list</em>) ]
+              { [ [declaration]* | documentation-string ]
+                mac-body } ]*
+      { maclet-body }
+</pre>
+<p>
+maclet is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_fletcm_scm_macrolet.html">macrolet</a>.
+</p>
+<p>
+maclet defines local macros, available for use inside maclet-body. Syntax for macro definition inside maclet is the same as one in <a class="crossSelfRef" href="#TLmac">mac</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLmeth">meth</a></h3>
+
+<pre>
+   meth [setter] func-name [<em>method-qualifier</em>]* ( <em>specialized-lambda-list</em> )
+       { [ [declaration]* | documentation-string ]
+         body }
+</pre>
+<p>
+with
+</p>
+<pre>
+   <em>specialized-lambda-list</em> := [ var [==<em>parameter-specializer-name</em>] ]*
+                              <em>lambda-list</em>
+</pre>
+<p>
+where <em>lambda-list</em> is like one for <a class="crossSelfRef" href="#TLlambda">lambda</a>, and <em>parameter-specializer-name</em> is either a symbol or eql(expression).
+</p>
+<p>
+meth is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defmethod.html">defmethod</a>.
+</p>
+<p>
+meth adds or modifies a method of a generic function. If a generic does not exist, yet, it will be created automatically.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLpackage">package</a></h3>
+
+<pre>
+   package name { [ option { [value]* } ]* }
+</pre>
+<p>
+package is translated into CL's <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defpackage.html">defpackage</a>. Thus, options and their values in package are the same as those in <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defpackage.html">defpackage</a>.
+</p>
+<p>
+package creates a new package.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLprog">prog</a></h3>
+
+<pre>
+   prog [ ( [var [=initValue] ]* ) ]
+       { [declaration]*
+         [ tag | expression ]* }
+</pre>
+<p>
+prog is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_progcm_progst.html">prog</a>.
+</p>
+<p>
+prog is simulatneously a <a class="crossSelfRef" href="#TLlet">let</a>, <a class="crossSelfRef" href="#TLblock">block</a> nil and a <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_tagbody.html">tagbody</a>. It is possible to define local lexical variables for use in the prog's body. It is possible to exit prematurely with <a class="crossSelfRef" href="#TLbreak">break</a>. And it is possible to jump between tags with <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_go.html">go(tag)</a>.
+</p>
+<p>
+If exit from prog is performed via <a class="crossSelfRef" href="#TLbreak">break</a>, then return value is whatever is given to <a class="crossSelfRef" href="#TLbreak">break</a>. Otherwise, nil is returned.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLprogs">progs</a></h3>
+
+<pre>
+   progs [ ( [var [=initValue] ]* ) ]
+       { [declaration]*
+         [ tag | expression ]* }
+</pre>
+<p>
+prog is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_progcm_progst.html">prog*</a>.
+</p>
+<p>
+progs is essentially the same as <a class="crossSelfRef" href="#TLprog">prog</a>, except that variables are created like in <a class="crossSelfRef" href="#TLlets">lets</a>.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLrestart">restart</a></h3>
+
+<pre>
+   restart { body }
+ [ at [name] [ (<em>lambda-list</em>) ]
+       { [ :interactive, <em>interactive-expression</em> | :report, <em>report-expression</em> |
+           :test, <em>test-expression</em> ]
+          [declaration]*
+          [expression]* } ]*
+</pre>
+<p>
+restart is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_restart-case.html">restart-case</a>.
+</p>
+<p>
+<em>lambda-list</em> is the same as one in <a class="crossSelfRef" href="#TLlambda">lambda</a>.
+</p>
+<p>
+To create an anonymous restart, simply omit the name.
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLreturn">return</a></h3>
+
+<pre>
+   return [ from block-name ] [ return-value ]
+</pre>
+<p>
+return is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_return-from.html">return-from</a>. return is supposed to appear only in the bodies of functions or methods. If block-name is omitted, it defaults to the name of the function/method, where return appears. If return-value is omitted, it defaults to nil.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLstruct">struct</a></h3>
+
+<pre>
+   struct name
+       {  [slot [ {initValue [,option=value]* } ] ]*  }
+    [ options { [option=value]* } ]
+</pre>
+<p>
+struct is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defstruct.html">defstruct</a>. Options for each slot and for structure as a whole are exactly the same as the ones for <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_defstruct.html">defstruct</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLthrow">throw</a></h3>
+
+<pre>
+   throw tag [ result ]
+</pre>
+<p>
+throw is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_throw.html">throw</a>. If result is omitted, it defaults to nil.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLtimes">times</a></h3>
+
+<pre>
+   times ( var, maxValue [,varN [= initValue [-> stepValue] ] ]* )
+     [ ( [result-expressions]* ) ]
+       { [declaration]*
+         [ tag | expression ]* }
+</pre>
+<p>
+times is translated into &amp;tl-times macro.
+</p>
+<p>
+On every iteration of times loop, var is bound to integers starting from 0, but less than maxValue. Other variables can be created and changed on every iteration, similar to <a class="crossSelfRef" href="#TLfor">for loop</a>
+</p>
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLtry">try</a></h3>
+
+<pre>
+   try { try-body }
+   finally { final-body }
+</pre>
+<p>
+try-finally is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/speope_unwind-protect.html">unwind-protect</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLtypecase">typecase</a></h3>
+
+<pre>
+   typecase (obj)
+ [ is (typeN) { bodyN } ]*
+</pre>
+<p>
+typecase is translated into CL <a class="inText" href="http://www.lisp.org/HyperSpec/Body/mac_typecasec_cm_etypecase.html">typecase</a>.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+<div class="textSection">
+
+<h3><a id="TLuse">use</a></h3>
+
+<pre>
+   use [ package[:] ] { [ symbol [= synonym] ]* }
+</pre>
+<p>
+use is a TwinLisp's directive.
+</p>
+<p>
+use directive tells TwinLisp to substitute every occurance of synonym with package[:]:symbol. If synonym is not given, then every occurance of symbol will be substituted with package[:]:symbol.
+</p>
+
+
+<p class="backToContent">
+<a class="backToContent" href="#Contents">Back to content</a>
+</p>
+
+</div>
+
+
+</div>
+
+
+
+<div class="navigation">
+<ul class="nav">
+    <li class="nav"> <a class="nav" href="http://twinlisp.nongnu.org/" title="TwinLisp Homepage"><em>TwinLisp Home</em></a> </li>
+</ul>
+</div>
+
+
+
+<div id="legalize">
+<p>Copyright (c) 2006 Mikalai Birukou.</p>
+<p>
+Permission is granted to copy, distribute and/or modify this document under the terms of the GNU Free Documentation License, Version 1.2 or any later version published by the Free Software Foundation. Text of this license is provided in COPYING.txt file.
+</p>
+</div>
+
+
+
+<div id="validation">
+<p id="validate">
+<a href="http://validator.w3.org/check?uri=referer">
+<img src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!" title="Check if this XHTML 1.1 valid" />
+</a>
+<a href="http://jigsaw.w3.org/css-validator/">
+<img src="http://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!" title="Check if CSS is valid" />
+</a>
+</p>
+</div>
+
+
+
+</body>
+</html>
