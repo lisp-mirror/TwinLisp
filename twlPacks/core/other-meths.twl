@@ -1,0 +1,78 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+
+inside "TWINLISP"
+
+; copying methods
+
+defgen _copy_ (obj)
+    options {
+        :documentation="This function is used by copy:copy(). Returns copy of an object." }
+    meth (obj==&bit-vector) {
+        obj}
+    meth (obj==character) {
+        obj}
+    meth (obj==number) {
+        obj}
+    meth (obj==string) {
+        &copy-seq(obj)}
+    meth (obj==symbol) {
+        obj}
+
+
+defgen _deepcopy_ (obj,memo)
+    options {
+        :documentation="This function is used by copy:deepcopy(). Returns a deep copy of an object and an update memo (hash-table with obj->objCopy mapping)." }
+    meth (obj==&bit-vector,memo) {
+        obj @ memo }
+    meth (obj==character,memo) {
+        obj @ memo }
+    meth (obj==number,memo) {
+        obj @ memo }
+    meth (obj==string,memo) {
+        &copy-seq(obj) @ memo }
+    meth (obj==symbol,memo) {
+        obj @ memo }
+
+
+;; getting states of objects or structure
+flet &slots-values-to-htab (obj) {
+        use clos { &class-slots }
+	    use clos: { &$name = slName }
+        for (slotDescr,&class-slots(&class-of(obj)),tab={})
+            (tab) {
+            if (obj.&slot-boundp(slotDescr.slName)) {
+                tab[slotDescr.slName] = obj.&slot-value(slotDescr.slName) }}} {
+    defgen _getstate_ (obj)
+        meth (obj==&structure-object) {
+            &slots-values-to-htab(obj) }
+        meth (obj==&standard-object) {
+            &slots-values-to-htab(obj) }}
+
+;; setting states of objects or structure
+flet &set-slots-from-htab (obj,state) {
+        maphash(#' lambda(key,value) { obj.&slot-value(key) = value }
+                state) } {
+    defgen _setstate_ (obj,state)
+        meth (obj==&structure-object,state) {
+            &set-slots-from-htab(obj,state) }
+        meth (obj==&standard-object,state) {
+            &set-slots-from-htab(obj,state) }}
+
+

@@ -1,0 +1,84 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use regexp { &regexp-compile = re_comp, &regexp-exec = re_exec }
+use regexp: { end = mend, start = mstart }
+
+def &write-tlisp-file(clispPath,tlHomePath,fileName,destPath) {
+    expr_re = re_comp("(tlPath (namestring (ext:cd)))")
+    &with-open-file(.(twinlispFile,fileName,:direction=:input)) {
+        &with-open-file(.(tlisp,destPath,:direction=:output)) {
+            if (clispPath) { &write-line(clispPath,tlisp) }
+            line @ match = \
+                do (line=twinlispFile.&read-line(nil,nil)->twinlispFile.&read-line(nil,nil)
+                    match) {
+                    match = expr_re.re_exec(line)
+                    if (match) { break line @ match }
+                    &write-line(line,tlisp) }
+            &write-string(line,tlisp,:start=0,:end=match.mstart)
+            &write-string(concatenate('string,"(tlPath \"",tlHomePath,"\")"),tlisp)
+            &write-line(line,tlisp,:start=match.mend)
+            do (line=twinlispFile.&read-line(nil,nil)->twinlispFile.&read-line(nil,nil))
+                (&not(line)) {
+                &write-line(line,tlisp) }}}}
+
+tlHomePath @ execPath @ clispPath = \
+    if (&>=(length(&*args*),3)) { car(&*args*) @ cadr(&*args*) @ caddr(&*args*) }
+    elif (&=(length(&*args*),2)) { car(&*args*) @ cadr(&*args*) @ "" }
+    elif (&=(length(&*args*),1)) { car(&*args*) @ car(&*args*) @ "" }
+    else { nil @ nil @ nil }
+
+if (&not(tlHomePath)) {
+    &write-line("Installing tlisp (TwinLisp on top of clisp)")
+    &write-string("Give a directory, where tlisp's libraries should be placed
+  (you should have write permission)
+Default is /usr/lib/: ")
+    tlHomePath = &read-line() }
+if (equal(tlHomePath.length(),0)) { tlHomePath = "/usr/lib/twlisp/" }
+else { tlHomePath = concatenate('string,tlHomePath,"/twlisp/") }
+if (&not(execPath)) {
+    &write-string("Give a directory, where tlisp and tclisp executables should be placed
+  (you should have write permission)
+Default is /usr/bin/: ")
+    execPath = &read-line() }
+if (equal(execPath.length(),0)) { execPath = "/usr/bin/" }
+tlispPath = concatenate('string,execPath,"/tlisp")
+tclispPath = concatenate('string,execPath,"/tclisp")
+if (&not(clispPath)) {
+    &write-string("Give a path to a clisp executable.
+Default is /usr/bin/clisp: ")
+    clispPath = &read-line() }
+if (equal(clispPath.length(),0)) { clispPath = "#!/usr/bin/clisp" }
+else { clispPath = concatenate('string,"#!",clispPath) }
+
+;  -------- COPY APPROPRIATE STUFF TO LIB LOCATION AND COMPILE IT ----------
+shell(concatenate('string,"mkdir ",tlHomePath
+"; cp -r * ",tlHomePath
+"; cd ",tlHomePath
+"; echo \"Compiling core files ...\""
+"; clisp compile-core.lisp"
+"; echo \"Setting up executable file ...\""))
+&write-tlisp-file(clispPath,tlHomePath,"twinlisp.lisp",tlispPath)
+&write-tlisp-file(nil,tlHomePath,"tclisp.lisp",concatenate('string,tlHomePath,"tclisp-pluggin.lisp"))
+shell(concatenate('string,"echo \"",clispPath.subseq(2)," -q --silent -i ",
+                   concatenate('string,tlHomePath,"tclisp-pluggin.lisp"),"\" > ",tclispPath))
+&write-line("Compiling dist-packages ...")
+shell(concatenate('string,"clisp ",tlispPath," compile-dist-packs.twl"
+"; echo \"Done.\""))
+

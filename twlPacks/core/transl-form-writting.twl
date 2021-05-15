@@ -1,0 +1,147 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+
+inside "TWINLISP"
+
+
+
+def formToText(form) {
+    case (form[0])
+    is (ATOM_TYPE) {
+        form[1] }
+    is (FORM_TYPE) {
+        text = ""
+        for (subForm,form[1]) {
+            text += formToText(subForm) + " " }
+        if (len(text)>0) {
+            text = text[0->len(text)-1] }  ; strip one space at the end
+        "("+text+")" }
+    is (COMMENT_TYPE) {
+        form[1]+#\Newline }
+    is (SHORTCUT_TYPE) {
+        form[1]+formToText(form[2]) }
+    else {
+        error("Programming error: unknown form type: ~A" % form[0]) }}
+
+
+def writeTo(form,dest=nil) {
+    text = formToText(form)
+    if (text[-1]!=#\Newline ) { text += #\Newline }
+    if (dest) {
+        dest << text }
+    else {
+        text }}
+
+
+def &translate-streams(source,dest,lineNumbering=nil) {
+    for (form,getForms(GrowingVect.new(:streamObj=source)
+                       makeLevelInfo(:implScope=t,:explScopeWarn=t)
+                       lineNumbering)) {
+        writeTo(form,dest) }}
+
+def &translate-file (fName,destFName) {
+    &with-open-file (.(sourceFile,fName,:direction=:input)) {
+        &with-open-file (.(destFile,destFName,:direction=:output)) {
+            &translate-streams(sourceFile,destFile) }}}
+
+class ReaderWriter {
+    firstLine { :initform=t }
+    inStream { :initarg=:inStream
+               :initform=&*standard-input* }
+    outStream { :initarg=:outStream
+                :initform=&*standard-output* }
+    firstPrompt { :initarg=:firstPrompt
+                  :initform=nil }
+    secondPrompt { :initarg=:secondPrompt
+                   :initform=nil }
+    }
+
+meth __readLine(rw==ReaderWriter) {
+    if (rw.firstLine) {
+        if (rw.firstPrompt) {
+            rw.outStream.&fresh-line()
+            rw.outStream << rw.firstPrompt }
+        rw.firstLine = nil }
+    else {
+        if (rw.secondPrompt) {
+            rw.outStream.&fresh-line()
+            rw.outStream << rw.secondPrompt }}
+    rw.inStream.__readLine() }
+
+def getFormsOnOneExtendedLine(gL,levelInfo,source) {
+    handle {
+        form @ end = getOneForm(0,gL,levelInfo,nil)
+        if (form) {
+            lispString = writeTo(form)
+            do () {
+                newStartInd = \
+                    do (i=end->i+1) (i>=gL.lineElems.len(), nil) {
+                        case (gL.lineElems[i].type)
+                        is (WHITE_ELEM,LINE_END_ELEM,COMM_ELEM,",") {}
+                        else { break i }}
+                if (newStartInd) {
+                    form @ end = getOneForm(newStartInd,gL,levelInfo,nil)
+                    if (form) { lispString += writeTo(form) }
+                    else { break }}
+                else { break }}
+            lispString }
+        else { translate (levelInfo,source) }}
+    cond &tl-syntax-error (er) {
+        source.outStream << "SYNTAX ERROR:~%~A~%" % er
+        translate (levelInfo,source) }}
+
+def translate (levelInfo=makeLevelInfo(), source=ReaderWriter.new()
+               &output-bye = nil, &string-to-exit = nil) {
+    source.firstLine = t
+    gL = GrowingVect.new(:streamObj=source)  ; read at least one line on initialization
+    if (gL.len()==0) {  ; this will be caused by Ctrl-D
+        if (&output-bye) { source.outStream << #\Newline << "Bye." << #\Newline }
+        throw :exit }
+    if (&string-to-exit) {
+        if (gL[0].type==SYMB_ELEM) { ; typing exit
+            if (gL[0].value=="exit") {
+                if (&output-bye) { source.outStream << "Bye." << #\Newline }
+                throw :exit }}}
+    getFormsOnOneExtendedLine(gL,levelInfo,source) }
+
+let (twlType="twl",lispType="lisp") {
+    def &translate-files(fNames,verbosity=nil) {
+        for (fName,fNames) {
+            destFName = \
+                typecase (fName)
+                is (string) {
+                    if (fName[len(fName)-4->]=="."+twlType) { fName[0->len(fName)-4] + "."+lispType }
+                    else { fName + "."+lispType }}
+                is (&logical-pathname) {
+                    &merge-pathnames(&make-pathname(:type=lispType),&translate-logical-pathname(fName)) }
+                is (pathname) {
+                    &merge-pathnames(&make-pathname(:type=lispType),fName) }
+                is (t) {
+                    error("Function &translate-files accepts only either string or pathname as a filename") }
+            if (verbosity) { cout() << "~%Translating file ~A ..." % fName }
+            handle {
+                &translate-file(fName,destFName) }
+            cond &tl-syntax-error (er) {
+                cout() << "~%Syntax Error in file ~A:" % fName
+                cout() << "~%~A~%" % er.message
+                cout() << "File ~A is empty" % destFName
+                break }
+            if (verbosity) { cout() << "~%Wrote file ~A~%" % destFName }}}}
+

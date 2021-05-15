@@ -1,0 +1,51 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use TWINLISP: { makeLevelInfo, ReaderWriter }
+
+cout() << "TwinLisp interpreter." << #\Newline << \
+    "Typing \"Ctrl-D\" or \"exit\" quits interpreter." << #\Newline
+var( &*tl-level-info* = makeLevelInfo(:implScope=t,:explScopeWarn=t) )
+; &*print-circle* = t  ; so that our printer does not choke on circles
+catch :exit {
+    do (&+,&++,&+++,&-,&*,&**,&***) {
+        handle {
+            &- = &read-from-string( translate(&*tl-level-info*
+                                              ReaderWriter.new(:firstPrompt=">>> "
+                                                               :secondPrompt="... ")
+                                              t, "exit"))
+            &*** = &multiple-value-list(eval(&-))
+            cout() << #\Newline
+            write(car(&***))
+            if (len(&***)>1) {
+                for (value,cdr(&***)) {
+                    cout() << "  ;" << #\Newline
+                    write(value) }}
+            cout() << #\Newline }
+        cond error (er) {
+            cout() << "ERROR: ~A~%" % er
+            &*** = ~[er] }
+        &+++ = car(&***)
+        &*** = &**
+        &** = &*
+        &* = &+++
+        &+++ = &++
+        &++ = &+
+        &+ = &- }}
+

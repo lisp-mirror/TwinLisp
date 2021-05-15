@@ -1,0 +1,304 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+inside "TWINLISP"
+
+;; Operator 'not'
+
+defgen _not_ (obj)
+    
+    meth (obj==t) {
+        &not(obj)}
+    
+    meth (bitVect==&bit-vector) {
+        &bit-not(bitVect)}
+
+
+;; Operator 'and'
+
+defgen _and_ (fst,snd)
+    
+    meth (fst==t, snd==t) {
+        &and(fst,snd)}
+    
+    meth (fstBitVect==&bit-vector, sndBitVect==&bit-vector) {
+        &bit-and(fstBitVect,sndBitVect)}
+
+
+;; Operator 'or'
+
+defgen _or_ (fst,snd)
+    
+    meth (fst==t, snd==t) {
+        &or(fst,snd)}
+    
+    meth (fstBitVect==&bit-vector, sndBitVect==&bit-vector) {
+        &bit-ior(fstBitVect,sndBitVect)}
+
+
+;; Operator 'xor' (exclusive or)
+
+defgen _xor_ (fst,snd)
+    
+    meth (fst==t, snd==t) {
+        (fst or snd) and ((not fst) or (not snd))}
+    
+    meth (fstBitVect==&bit-vector, sndBitVect==&bit-vector) {
+        &bit-xor(fstBitVect,sndBitVect)}
+
+
+;; Equality operator '=='
+
+defgen &_==_ (fst,snd)
+    
+    meth (fstNum==number, sndNum==number) {
+        &=(fstNum,sndNum)}
+    
+    meth (fstChar==character, sndChar==character) {
+        &char=(fstChar,sndChar)}
+    
+    meth (fstStr==string, sndStr==string) {
+        &string=(fstStr,sndStr)}
+    
+    meth (fstBitVect==&bit-vector, sndBitVect==&bit-vector) {
+        equal(fstBitVect,sndBitVect)}
+    
+    meth (fstVect==vector, sndVect==vector) {
+        if (fstVect.eq(sndVect)) { t }
+        elif (fstVect.len()==sndVect.len()) {
+            vecLen = fstVect.len()
+            do (i=0->i+1) (i>=vecLen,t) {
+                if (fstVect[i]!=sndVect[i]) { break nil }}}
+        else { nil }}
+    
+    meth (fstLst==list, sndLst==list) {
+        if (fstLst.eq(sndLst)) { t }
+        else {
+            do (fstCons=fstLst, sndCons=sndLst) {
+                if (endp(fstCons)) { break endp(sndCons) }
+                else {
+                    if (endp(sndCons)) { break nil }
+                    else {
+                        if (fstCons.car()!=sndCons.car()) { break nil }
+                        elif (fstCons.cdr()==sndCons.cdr()) { break t }
+                        else {
+                            fstCons = fstCons.cdr()
+                            sndCons = sndCons.cdr()
+                            if (fstCons.eq(fstLst) or sndCons.eq(sndLst)) {
+                                break (fstCons.eq(fstLst) and sndCons.eq(sndLst)) }}}}}}}
+    
+    meth (fstTab==&hash-table, sndTab==&hash-table) {
+        if (fstTab.eq(sndTab)) { t }
+        elif (fstTab.len()==sndTab.len()) {
+            maphash(#'lambda (fstKey,fstVal) {
+                        sndVal @ keyPresent = sndTab[fstKey]
+                        if ((not keyPresent) or (sndVal!=fstVal)) { return from &_==_ nil }}
+                    fstTab)
+            t }
+        else { nil }}
+    
+    meth (fst==t, snd==t) {
+        eq(fst,snd)}
+
+
+;; Non-equality operator '!='
+
+defgen &_!=_ (fst,snd)
+    
+    meth (fst==t, snd==t) {
+        not (fst==snd)}
+
+
+;; Smaller-then operator '<'
+
+defgen &_<_ (fst,snd)
+    
+    meth (fstNum==number, sndNum==number) {
+        &<(fstNum,sndNum)}
+    
+    meth (fstChar==character, sndChar==character) {
+        &char<(fstChar,sndChar)}
+    
+    meth (fstStr==string, sndStr==string) {
+        &string<(fstStr,sndStr)}
+
+
+;; Smaller-or-equal operator '<='
+
+defgen &_<=_ (fst,snd)
+    
+    meth (fstNum==number, sndNum==number) {
+        &<=(fstNum,sndNum)}
+    
+    meth (fstChar==character, sndChar==character) {
+        &char<=(fstChar,sndChar)}
+    
+    meth (fstStr==string, sndStr==string) {
+        &string<=(fstStr,sndStr)}
+
+
+;; Greater-then operator '>'
+
+defgen &_>_ (fst,snd)
+    
+    meth (fstNum==number, sndNum==number) {
+        &>(fstNum,sndNum)}
+    
+    meth (fstChar==character, sndChar==character) {
+        &char>(fstChar,sndChar)}
+    
+    meth (fstStr==string, sndStr==string) {
+        &string>(fstStr,sndStr)}
+
+
+;; Greater-or-equal operator '>='
+
+defgen &_>=_ (fst,snd)
+    
+    meth (fstNum==number, sndNum==number) {
+        &>=(fstNum,sndNum)}
+    
+    meth (fstChar==character, sndChar==character) {
+        &char>=(fstChar,sndChar)}
+    
+    meth (fstStr==string, sndStr==string) {
+        &string>=(fstStr,sndStr)}
+
+
+;; Addition operator '+'
+
+defgen &_+_ (fst,snd)
+    
+    meth (fstNum==number, sndNum==number) {
+        &+(fstNum,sndNum)}
+    
+    meth (fstLst==list, sndLst==list) {
+        ('list).concatenate(fstLst,sndLst)}
+    
+    meth (fstVect==vector, sndVect==vector) {
+        resultVect = []
+        resultVect.extend(fstVect,sndVect)
+        resultVect}
+    
+    meth (fstStr==string, sndStr==string) {
+        ('string).concatenate(fstStr,sndStr)}
+    
+    meth (str==string, char==character) {
+        ('string).concatenate(str,string(char))}
+    
+    meth (char==character, str==string) {
+        ('string).concatenate(string(char),str)}
+
+
+;; Unary plus
+
+defgen &_unary+_ (obj)
+    
+    meth (num==number) {
+        num}
+
+
+;; Subtraction operator '-'
+
+defgen &_-_ (fst,snd)
+    
+    meth (fstNum==number, sndNum==number) {
+        &-(fstNum,sndNum)}
+
+
+;; Unary minus
+
+defgen &_unary-_ (obj)
+    
+    meth (num==number) {
+        &-(num)}
+
+
+;; Multiplication operator '*'
+
+defgen &_*_ (fst,snd)
+    
+    meth (fstNum==number, sndNum==number) {
+        &*(fstNum,sndNum)}
+
+
+;; Division operator '/'
+
+defgen &_/_ (fst,snd)
+    
+    meth (fstNum==number, sndNum==number) {
+        &/(fstNum,sndNum)}
+
+
+;; Modulus division operator '%'
+
+defgen &_%_ (fst,snd)
+    
+    meth (fstInt==integer, sndInt==integer) {
+        &nth-value(0,floor(fstInt,sndInt))}
+    
+    meth (fstStr==string, sndStr==string) {
+        apply(#'format,~[nil,fstStr,sndStr]) }
+    
+    meth (str==string, lst==list) {
+        if (null(lst)) { apply(#'format,~[nil,str,nil]) }
+        else { apply(#'format,~[nil,str]+lst) }}
+    
+    meth (str==string, obj==t) {
+        apply(#'format,~[nil,str,obj]) }
+    
+    meth (str==string, seq==sequence) {
+        apply(#'format,~[nil,str]+seq.coerce('list))}
+
+
+;; Exponentiation operator '**'
+
+defgen &_**_ (fst,snd)
+    
+    meth (fstNum==number, sndNum==number) {
+        expt(fstNum,sndNum)}
+
+
+;; Appending operator '<<'
+
+defgen &_<<_ (fst,snd)
+    
+    meth (lst==list, obj==t) {
+        &err-on-null(lst,"Operator '<<' cannot append to null list")
+        lst.last().cdr() = ~[obj]
+        lst }
+    
+    meth (vec==vector, obj==t) {
+        &vector-push-extend(obj,vec)
+        vec }
+    
+    meth (str==stream, s==string) {
+        &write-string(s,str)
+        str }
+    
+    meth (str==stream, char==character) {
+        &write-char(char,str)
+        str }
+    
+    meth (str==stream, int==integer) {
+        &write-byte(int,str)
+        str }
+
+
+
+

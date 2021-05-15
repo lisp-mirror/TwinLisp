@@ -1,0 +1,84 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+;; TwinLisp package definition
+
+package TwinLisp {
+    :nicknames {"TWL", "TL"}
+    :&use {"COMMON-LISP"}
+    :export {
+        ; useful macros
+        "NEW", "TL-CASE", "TL-FOR", "VAR", "PARAM", "CONST", "TL-TIMES"
+        ; useful functions
+        "CIN", "COUT", "*TL-LOAD-PATHS*"
+        "TL-LOAD", "TL-REQUIRE"
+        "TRANSLATE", "TRANSLATE-STREAMS", "TRANSLATE-FILES"
+        ; export operators' symbols
+        "_UNARY+_", "_UNARY-_", "_NOT_"
+        "_**_", "_*_", "_/_", "_%_", "_+_", "_-_"
+        "_AND_", "_XOR_", "_OR_"
+        "_<_", "_>_", "_<=_", "_>=_", "_==_", "_!=_"
+        "_<<_"
+        "_+=_", "_-=_", "_*=_", "_/=_"
+        ; export universal methods
+        "_COPY_", "_DEEPCOPY_", "_GETSTATE_", "_SETSTATE_"
+        ; export types' symbols
+        "_SLICE_", "_ITERATOR_", "_LIST-ITERATOR_", "_SEQUENCE-ITERATOR_"
+        ; export container creation funcs
+        "_MAKE-SLICE_", "_MAKE-HASH-TABLE_", "_MAKE-VECTOR_"
+        ; export containers' methods
+        "LEN", "_GETITEM_", "(SETF _GETITEM_)", "INDEX", "EXTEND", "INSERT", "UPDATE"
+        "TL-POP", "TL-COUNT", "TL-APPEND", "TL-REMOVE"
+         "ITER", "NEXT", "(SETF NEXT)"
+        "TKEYS", "TVALUES", "TITEMS", "HAS_KEY"
+        ; export error conditions
+        "INDEX-ERROR", "CONTAINER"  ; "INDEX" is exported above
+        "NULL-LIST-ERROR"
+        }
+    }
+
+&use-package("TL")
+
+inside "TWINLISP"
+
+defvar( &*tl-load-paths* = \
+    ~[pathname("")
+      &translate-logical-pathname(&logical-pathname("tl-sys:site-packages;"))
+      &translate-logical-pathname(&logical-pathname("tl-sys:dist-packages;"))] )
+
+let (loadPaths = ~[ ; TL's core methods, funcs, etc.
+                    "tl-sys:core;other-macs"
+                    "tl-sys:core;container-types-and-macs"
+                    "tl-sys:core;oper-macs"
+                    "tl-sys:core;other-funcs"
+                    "tl-sys:core;oper-meths"
+                    "tl-sys:core;other-meths"
+                    "tl-sys:core;container-meths"
+                    ; TL's translator
+                    "tl-sys:core;transl-const"
+                    "tl-sys:core;transl-string-reading"
+                    "tl-sys:core;transl-elem-search-funcs"
+                    "tl-sys:core;transl-form-building"
+                    "tl-sys:core;transl-form-writting"
+                    ; TL's loading func
+                    "tl-sys:core;loader-funcs"
+                    ; reader macro for Clisp to read TL code
+                    "tl-sys:core;reader-tl-macro"]) {
+    dolist (.(logPath,loadPaths)) {
+        _load(&logical-pathname(logPath)) }}
+

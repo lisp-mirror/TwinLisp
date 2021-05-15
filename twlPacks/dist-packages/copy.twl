@@ -1,0 +1,160 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+;;
+;;  This defines copy pack for use in TwinLisp
+;;
+
+package copy {
+    :nicknames {"TL-COPY"}
+    :&use {"COMMON-LISP","TWINLISP"}
+    :export {
+        ; there are only two functions defined here:
+        "COPY", "DEEPCOPY", "DO-IF-NOT-COPIED"
+        }
+    }
+
+inside "COPY"
+
+
+;; some useful macros
+mac &do-if-not-copied(obj,memo,**body) {
+    `if (($memo).has_key($obj)) {
+        ($memo)[$obj] @ $memo }
+    else { $@body }}
+
+
+def copy(obj) {
+    "Copy returns a shallow copy of a given object. There should be a method in generic function _copy_(), specific for a given object, else an error will be issued."
+    _copy_(obj) }
+
+;; _copy_ methods below
+
+meth _copy_ (lst==list) {
+    "copy will work with proper, dotted and circular lists"
+    if (null(lst)) { return lst }
+    lCopy = cons(nil,nil)
+    lCopy.car() = if (eq(lst.car(),lst)) { lCopy }
+                  else { _copy_(lst.car()) }
+    dos (lstCon=lst.cdr()->lstCon.cdr()
+         lstConCopy=lCopy->lstConCopy.cdr())
+        (null(lstCon), lCopy) {
+        if (lstCon.typep('list)) {
+            if (eq(lstCon,lst)) {
+                lstConCopy.cdr() = lCopy
+                break lCopy }
+            else {
+                lstConCopy.cdr() = cons(lstCon.car(),nil) }}
+        else {
+            lstConCopy.cdr() = lstCon
+            break lCopy }}}
+
+meth _copy_ (vec==vector) {
+    times (i,vec.len()
+           vCopy = &_make-vector_(:elemType=&array-element-type(vec)
+                                  :initLen=len(vec)))
+          (vCopy)
+        { vCopy[i] = vec[i] }}
+
+meth _copy_ (st==&structure-object) {
+    &copy-structure(st) }
+
+meth _copy_ (obj==&standard-object) {
+    use clos { &class-slots }
+	use clos: { &$name = slName }
+    objClass = &class-of(obj)
+    for (slotDescr,&class-slots(objClass)
+         oCopy=&allocate-instance(objClass))
+        (oCopy) {
+        if (obj.&slot-boundp(slotDescr.slName)) {
+            oCopy.&slot-value(slotDescr.slName) = obj.&slot-value(slotDescr.slName) }}}
+
+
+
+;;;;
+;;;;  deepcopying starts here
+;;;;
+
+
+def deepcopy(obj,memo={}) {
+    "Deepcopy returns a deep copy of a given object. There should be a method in generic function _deepcopy_(), specific for a given object, else an error will be issued."
+    &nth-value(0,_deepcopy_(obj,memo)) }
+
+;; _deepcopy_ methods below
+
+meth _deepcopy_ (lst==list,memo) {
+    "deepcopy will work with proper, dotted and circular lists"
+    if (null(lst)) { return lst @ memo }
+    &do-if-not-copied(lst,memo) {
+        memTab = memo
+        lCopy = cons(nil,nil)
+        memTab[lst] = lCopy
+        lCopy.car() @ memTab = _deepcopy_(lst.car(),memTab)
+        dos (lstCon=lst.cdr()->lstCon.cdr()
+             lstConCopy=lCopy->lstConCopy.cdr()
+             elemCopy)
+            (null(lstCon), lCopy @ memTab) {
+            if (lstCon.typep('list)) {
+                if (eq(lstCon,lst)) {
+                    lstConCopy.cdr() = lCopy
+                    break lCopy @ memTab }
+                else {
+                    elemCopy @ memTab = _deepcopy_(lstCon.car(),memTab)
+                    lstConCopy.cdr() = cons(elemCopy,nil) }}
+            else {
+                lstConCopy.cdr() @ memTab = _deepcopy_(lstCon,memTab)
+                break lCopy @ memTab }}}}
+
+meth _deepcopy_ (vec==vector,memo) {
+    &do-if-not-copied(vec,memo) {
+        memTab = memo
+        vCopy = &_make-vector_(:elemType=&array-element-type(vec)
+                            :initLen=len(vec))
+        memTab[vec] = vCopy
+        times (i,vec.len())
+            (vCopy @ memTab) {
+            vCopy[i] @ memTab = _deepcopy_(vec[i],memTab) }}}
+
+meth _deepcopy_ (tab==&hash-table,memo) {
+    &do-if-not-copied(tab,memo) {
+        memTab = memo
+        tCopy = {}
+        memTab[tab] = tCopy
+        maphash(#' lambda (key,value,&&aux keyCopy) {
+                        global memo
+                        keyCopy @ memo = key._deepcopy_(memo)
+                        tCopy[keyCopy] @ memo = value._deepcopy_(memo) }
+                tab)
+        tCopy @ memo }}
+
+flet objDeepcopy (obj,memo) {
+        &do-if-not-copied(obj,memo) {
+            memTab = memo
+            oCopy = &allocate-instance(&class-of(obj))
+            memTab[obj] = oCopy
+            objState = obj._getstate_()
+            stateCopy @ memTab = objState._deepcopy_(memTab)
+            oCopy._setstate_(stateCopy)
+            oCopy @ memTab }} {
+    meth _deepcopy_ (obj==&standard-object,memo) {
+        objDeepcopy(obj,memo) }
+    meth _deepcopy_ (obj==&structure-object,memo) {
+        objDeepcopy(obj,memo) }}
+
+
+

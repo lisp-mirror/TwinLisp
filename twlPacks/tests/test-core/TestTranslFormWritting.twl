@@ -1,0 +1,87 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use unittest {testcase, tName, tFuns, assertEqual, assertTrue, assertCondition
+              runOneTest }
+
+
+inside "TWINLISP"
+
+class TestTranslFormWritting (testcase) {
+    tName {:initform="TestTranslFormWritting.twl"}
+    tFuns {:initform='~(&test-formToText-1
+                        &test-formToText-2
+                        &test-translate-streams-1
+                        &test-translate-streams-2
+                        &test-translate-streams-3
+                        )}
+    }
+
+
+
+meth &test-formToText-1(ts==TestTranslFormWritting) {
+    form = ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],
+                        ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                                     ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_*_"],~[ATOM_TYPE,"y"],
+                                                  ~[ATOM_TYPE,"d"]]]]]]]
+    ts.assertEqual(formToText(form),"(cl:setf a (tl:_+_ x (tl:_*_ y d)))")
+    }
+
+meth &test-formToText-2(ts==TestTranslFormWritting) {
+    form = ~[SHORTCUT_TYPE, "'",
+             ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],
+                          ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                                       ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_*_"],~[ATOM_TYPE,"y"],
+                                                    ~[ATOM_TYPE,"d"]]]]]]]]
+    ts.assertEqual(formToText(form),"'(cl:setf a (tl:_+_ x (tl:_*_ y d)))")
+    }
+
+meth &test-translate-streams-1(ts==TestTranslFormWritting) {
+    source = &make-string-input-stream("let(x,y,d) {
+                                            x=s+v**j**f-k
+                                            y=d=e-r}")
+    dest = &make-string-output-stream()
+    &translate-streams(source,dest)
+    ts.assertEqual(dest.&get-output-stream-string(),
+"(cl:let (x y d) (cl:setf x (tl:_-_ (tl:_+_ s (tl:_**_ v (tl:_**_ j f))) k)) (cl:setf y (cl:setf d (tl:_-_ e r))))" + #\Newline)
+    }
+
+meth &test-translate-streams-2(ts==TestTranslFormWritting) {
+    source = &make-string-input-stream("s+v**j**f-k
+                                        e-r")
+    dest = &make-string-output-stream()
+    &translate-streams(source,dest,t)
+    ts.assertEqual(dest.&get-output-stream-string(),
+        "; source line # 1"  + #\Newline + \
+        "(tl:_-_ (tl:_+_ s (tl:_**_ v (tl:_**_ j f))) k)"  + #\Newline + \
+        "; source line # 2"  + #\Newline + \
+        "(tl:_-_ e r)"  + #\Newline)
+    }
+
+meth &test-translate-streams-3(ts==TestTranslFormWritting) {
+    source = &make-string-input-stream("`($s + v**j**f - $k)
+                                        '(e-r)")
+    dest = &make-string-output-stream()
+    &translate-streams(source,dest)
+    ts.assertEqual(dest.&get-output-stream-string(),
+        "`(tl:_-_ (tl:_+_ ,s (tl:_**_ v (tl:_**_ j f))) ,k)"  + #\Newline + \
+        "'(tl:_-_ e r)"  + #\Newline)
+    }
+
+

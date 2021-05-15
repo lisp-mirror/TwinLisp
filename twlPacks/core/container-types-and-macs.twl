@@ -1,0 +1,50 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+inside "TWINLISP"
+
+;; errors
+cond &index-error (&simple-error) {
+    container {:initarg=:container}
+    index {:initarg=:index}
+    }
+
+cond &null-list-error (&simple-error) {}
+
+;; _slice_ type for use with _getitem_
+struct _slice_ {
+    start
+    end
+    step}
+
+;; _iterator_ class
+class _iterator_ {
+    iterStarted {:initform=nil}
+    step {:initarg=:step}}
+
+;; _list-iterator_
+class &_list-iterator_ (_iterator_) {
+    lastCons {:initarg=:list, :type=list}}
+
+;; _sequence-iterator_
+class &_sequence-iterator_ (_iterator_) {
+    seq {:initarg=:sequence}
+    lastIndex {:initarg=:index, :type=integer}}
+
+
+

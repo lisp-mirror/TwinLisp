@@ -1,0 +1,496 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+;
+;This file contains huge section of code taken from Clisp.
+;This code is marked and is copyrighted by Clisp's respective copyrights.
+;Clisp code is also distributed under GNU GPL, so license requirements match.
+;
+
+;;
+;; This module forces Clisp to use updated read-eval-print function, which
+;; now performs translate-read-eval-print operations.
+;;
+
+inside "SYSTEM"
+
+use twinlisp { translate, new, var, len }
+use twinlisp: { makeLevelInfo, ReaderWriter }
+
+use &common-lisp-user: { &-, &+, &++, &+++, &/, &//, &///, &*, &**, &*** }
+
+var( &*tl-level-info* = makeLevelInfo(:implScope=t,:explScopeWarn=t) )
+var( &*tl-syntax-on* = t )
+
+
+let (&lisp-code-string,&fake-stdin,&string-is-gone) {
+    flet &update-fake-stdin (str) {
+            global &lisp-code-string
+            global &string-is-gone
+            global &fake-stdin
+            &lisp-code-string = str
+            &string-is-gone = nil
+            &fake-stdin = \
+                ext:&make-buffered-input-stream(
+                        #'lambda {  global &string-is-gone
+                                    if (&string-is-gone) { nil }
+                                    else { &string-is-gone = t, &lisp-code-string }}
+                        t)
+            &fake-stdin }
+         &read-form-without-prompt(&command-list) {
+            let (outStream = &*standard-output*) {
+                let (&*standard-output* = \
+                            ext:&make-buffered-output-stream(
+                                    #'lambda(str) {
+                                        &write-string(str,outStream) })) {
+                    &read-form("",&command-list) }}} {
+        
+        &update-fake-stdin("")
+        &string-is-gone = t
+        
+        def &read-tl-expr(prompt, &command-list = nil) {
+            &real-stdin = &*standard-input*
+            outStream = &*standard-output*
+            &fresh-line(outStream)
+            outStream << prompt
+            let (&*standard-input* = &fake-stdin) {
+                form @ flag = &read-form-without-prompt(&command-list)
+                if (flag) {
+                    do (form,flag=t)
+                       (not flag, form @ flag) {
+                        &*standard-input* = \
+                            &update-fake-stdin(
+                                translate(&*tl-level-info*,
+                                        ReaderWriter.new(:inStream=&real-stdin,
+                                                        :outStream=outStream,
+                                                        :secondPrompt="   ")))
+                        form @ flag = &read-form-without-prompt(&command-list) }}
+                else { form @ nil }}}}}
+
+def &read-eval-print(prompt, &command-list = nil) {
+    catch :exit {
+        form @ flag = \
+            if (&*tl-syntax-on*) { &read-tl-expr(prompt,&command-list) }
+            else { &read-form(prompt,&command-list) }
+        return \
+            if (flag) {
+                ; return T
+                form }
+            else {
+                setq(&+++,&++, &++,&+, &+,&-, &-,form)
+                vals = &multiple-value-list(eval(form))
+                setq(&///,&//, &//,&/, &/,vals)
+                setq(&***,&**, &**,&*, &*,vals.first())
+                ostream = &*standard-output*
+                &fresh-line(ostream)
+                if (vals.consp()) {
+                    write(vals.car(),:stream=ostream)
+                    do (L=vals.cdr()->L.cdr()) (L.atom()) {
+                        ostream << " ;"
+                        terpri(ostream)
+                        write(L.car(),:stream=ostream) }}
+                &elastic-newline(ostream) }
+        nil }
+    t }
+
+def &switch-syntax-mode() {
+    ext:&without-package-lock(.("SYSTEM")) {
+        global &*tl-syntax-on*
+        &*tl-syntax-on* = not &*tl-syntax-on* }
+    throw 'debug 'continue }
+
+
+;; The following code is from clisp/src/reploop.lisp lines 255-354.
+;; We make an addition of commands for switching syntaxes
+#t{
+;; extended commands
+(defun commands0 ()
+  (list*
+   (TEXT "
+Help (abbreviated :h) = this list
+Switch (abbreviated :sw) = switches between syntaxes
+Use the usual editing capabilities.
+Functions quit() and exit() close CLISP.")
+
+   (cons "Help"         #'debug-help)
+   (cons ":h"           #'debug-help)
+   (cons "Switch"       #'switch-syntax-mode)
+   (cons ":sw"          #'switch-syntax-mode)
+   (wrap-user-commands *user-commands*)))
+
+(defun commands1 ()
+  (list
+   (TEXT "
+Commands may be abbreviated as shown in the second column.
+COMMAND        ABBR     DESCRIPTION
+Help           :h, ?    this command list
+Switch         :sw      switches between syntaxes
+Error          :e       Print the last error message
+Inspect        :i       Inspect the last error
+Abort          :a       abort to the next recent input loop
+Unwind         :uw      abort to the next recent input loop
+Reset          :re      toggle *PACKAGE* and *READTABLE* between the
+                          local bindings and the sane values
+Quit           :q       quit to the top-level input loop
+Mode-1         :m1      inspect all the stack elements
+Mode-2         :m2      inspect all the frames
+Mode-3         :m3      inspect only lexical frames
+Mode-4         :m4      inspect only EVAL and APPLY frames (default)
+Mode-5         :m5      inspect only APPLY frames
+Where          :w       inspect this frame
+Up             :u       go up one frame, inspect it
+Top            :t       go to top frame, inspect it
+Down           :d       go down one frame, inspect it
+Bottom         :b       go to bottom (most recent) frame, inspect it
+Backtrace-1    :bt1     list all stack elements
+Backtrace-2    :bt2     list all frames
+Backtrace-3    :bt3     list all lexical frames
+Backtrace-4    :bt4     list all EVAL and APPLY frames
+Backtrace-5    :bt5     list all APPLY frames
+Backtrace      :bt      list stack in current mode
+Backtrace-l    :bl      list stack in current mode.
+                          Limit of frames to print will be prompted for.
+Frame-limit    :fl      set the frame-limit. This many frames will
+                          be printed in a backtrace at most.
+Break+         :br+     set breakpoint in EVAL frame
+Break-         :br-     disable breakpoint in EVAL frame
+Redo           :rd      re-evaluate form in EVAL frame
+Return         :rt      leave EVAL frame, prescribing the return values")
+   (cons "Help"         #'debug-help  )
+   (cons ":h"           #'debug-help  )
+   (cons "?"            #'debug-help  )
+   (cons "Switch"       #'switch-syntax-mode)
+   (cons ":sw"          #'switch-syntax-mode)
+   (cons "Error"        #'debug-print-error)
+   (cons ":e"           #'debug-print-error)
+   (cons "Inspect"      #'debug-inspect-error)
+   (cons ":i"           #'debug-inspect-error)
+   (cons "Abort"        #'debug-unwind)
+   (cons ":a"           #'debug-unwind)
+   (cons "Unwind"       #'debug-unwind)
+   (cons ":uw"          #'debug-unwind)
+   (cons "Reset"        #'debug-reset-io)
+   (cons ":re"          #'debug-reset-io)
+   (cons "Quit"         #'debug-quit)
+   (cons ":q"           #'debug-quit)
+   (cons "Mode-1"       #'debug-mode-1)
+   (cons ":m1"          #'debug-mode-1)
+   (cons "Mode-2"       #'debug-mode-2)
+   (cons ":m2"          #'debug-mode-2)
+   (cons "Mode-3"       #'debug-mode-3)
+   (cons ":m3"          #'debug-mode-3)
+   (cons "Mode-4"       #'debug-mode-4)
+   (cons ":m4"          #'debug-mode-4)
+   (cons "Mode-5"       #'debug-mode-5)
+   (cons ":m5"          #'debug-mode-5)
+   (cons "Where"        #'debug-where )
+   (cons ":w"           #'debug-where )
+   (cons "Up"           #'debug-up    )
+   (cons ":u"           #'debug-up    )
+   (cons "Top"          #'debug-top   )
+   (cons ":t"           #'debug-top   )
+   (cons "Down"         #'debug-down  )
+   (cons ":d"           #'debug-down  )
+   (cons "Bottom"       #'debug-bottom)
+   (cons ":b"           #'debug-bottom)
+   (cons "Backtrace-1"  #'debug-backtrace-1)
+   (cons ":bt1"         #'debug-backtrace-1)
+   (cons "Backtrace-2"  #'debug-backtrace-2)
+   (cons ":bt2"         #'debug-backtrace-2)
+   (cons "Backtrace-3"  #'debug-backtrace-3)
+   (cons ":bt3"         #'debug-backtrace-3)
+   (cons "Backtrace-4"  #'debug-backtrace-4)
+   (cons ":bt4"         #'debug-backtrace-4)
+   (cons "Backtrace-5"  #'debug-backtrace-5)
+   (cons ":bt5"         #'debug-backtrace-5)
+   (cons "Backtrace"    #'debug-backtrace  )
+   (cons ":bt"          #'debug-backtrace  )
+   (cons "Backtrace-l"  #'(lambda () (debug-backtrace *debug-mode* nil t)))
+   (cons ":bl"          #'(lambda () (debug-backtrace *debug-mode* nil t)))
+   (cons "Frame-limit"  #'debug-set-frame-limit )
+   (cons ":fl"          #'debug-set-frame-limit )))
+
+#t}
+
+;; The following code is from clisp/src/reploop.lisp lines 411-576.
+;; We make a small correction to prompt string, passed to read-eval-print function
+#t{
+
+;; Main-Loop with additional help-command
+(defun main-loop ()
+ (ext:without-package-lock ("SYSTEM")
+    (setq *break-count* 0))
+  (driver                 ; build driver-frame; do #'lambda "infinitely"
+   #'(lambda ()
+       (catch 'debug            ; catch the (throw 'debug ...)
+         ;; ANSI CL wants an ABORT restart to be available.
+         (with-restarts ((ABORT () (throw 'debug 'continue)))
+           (when (read-eval-print   ; read-eval-print INPUT-line
+                   (string-concat (prompt-start) (prompt-body)
+                                  (if *tl-syntax-on* "t" "c")
+                                  (prompt-finish))
+                   (commands0))
+             ;; T -> #<EOF>
+             ;; NIL -> form is already evaluated
+             ;;        result has been printed
+             (if (interactive-stream-p *standard-input*)
+               (exit)           ; user typed EOF
+               (progn (setq *command-index* 0) ; reset *command-index*
+                      (return-from main-loop))))))))) ; and proceed
+
+(setq *driver* #'main-loop)
+
+(defun break-loop (continuable &optional (condition nil) (print-it nil)
+                   &aux
+                   (may-continue
+                    (or continuable
+                        (and condition
+                             (let ((restart
+                                     (find-restart 'CONTINUE condition)))
+                               (and restart
+                                    ;; Ignore the CONTINUE restart if it is not
+                                    ;; useful without prior corrective action,
+                                    ;; otherwise it leads to user frustration.
+                                    (restart-meaningfulp restart)
+                                    restart)))))
+                   (interactive-p (interactive-stream-p *debug-io*))
+                   (commandsr '()))
+  (when (and print-it (typep condition (clos:find-class 'condition)))
+    (symbol-stream '*error-output* :output)
+
+    ;; print something on *error-output* but catch infinite recursion.
+    (let ((*recurse-count-error-output* (1+ *recurse-count-error-output*)))
+      (when (> *recurse-count-error-output* 3)
+        (setq *recurse-count-error-output* 0)
+        (makunbound '*error-output*)
+        (let ((*recurse-count-debug-io* (1+ *recurse-count-debug-io*)))
+          (when (> *recurse-count-debug-io* 3)
+            (setq *recurse-count-debug-io* 0)
+            (makunbound '*debug-io*)
+            (symbol-stream '*debug-io* :io))
+          (symbol-stream '*error-output* :output)))
+      (terpri *error-output*))
+
+    (if may-continue
+      (progn
+        (write-string "** - " *error-output*)
+        (write-string (TEXT "Continuable Error") *error-output*)
+        (terpri *error-output*))
+      (write-string "*** - " *error-output*))
+
+    ;; Output the error message, but don't trap into recursive errors.
+    (let ((*recursive-error-count* (1+ *recursive-error-count*)))
+      (if (> *recursive-error-count* 3)
+        (progn
+          (setq *recursive-error-count* 0)
+          (write-string (TEXT "Unprintable error message.")
+                        *error-output*))
+        (pretty-print-condition condition *error-output*
+                                :text-indent (if may-continue 5 6))))
+
+    ;; Now the error message is on the screen; give the user some information
+    ;; how to continue from continuable errors.
+    (symbol-stream '*debug-io* :io)
+    (when may-continue
+      (if continuable
+        (when interactive-p
+          (fresh-line *debug-io*)
+          (write-string (TEXT "You can continue (by typing 'continue').")
+                        *debug-io*)
+          (elastic-newline *debug-io*))
+        (progn
+          (fresh-line *debug-io*)
+          (when interactive-p
+            (write-string (TEXT "If you continue (by typing 'continue'): ")
+                          *debug-io*))
+          (princ may-continue *debug-io*)
+          (elastic-newline *debug-io*)))))
+
+  (when condition
+    (let ((restarts (remove may-continue (compute-restarts condition)))
+          (restarts-help (if may-continue
+                           (TEXT "The following restarts are also available:")
+                           (TEXT "The following restarts are available:"))))
+      (when restarts
+        (when interactive-p
+          (fresh-line *debug-io*)
+          (write-string restarts-help *debug-io*)
+          (elastic-newline *debug-io*))
+        (let ((counter 0))
+          (dolist (restart (subseq restarts 0 (- (length restarts) 1))) ; get rid of the outmost non-working restart
+            (let* ((command
+                    (string-concat ":R" (sys::decimal-string (incf counter))))
+                   (name (string (restart-name restart)))
+                   (helpstring (format nil "~A~15T~A~24T~A" name command
+                                       (princ-to-string restart)))
+                   (restart restart)  ; for FUNC
+                   (func #'(lambda () (invoke-restart-interactively restart))))
+              ;; display the restarts:
+              (when interactive-p
+                (fresh-line *debug-io*)
+                (write-string helpstring *debug-io*)
+                (elastic-newline *debug-io*))
+              (push (string-concat (string #\Newline) helpstring) commandsr)
+              ;; put it into the commandsr list.
+              (push (cons command func) commandsr)
+              (push (cons name func) commandsr)))
+          (setq commandsr (cons (string-concat (string #\Newline) restarts-help)
+                                (nreverse commandsr)))))))
+  (force-output *debug-io*)
+
+  (tagbody
+    (makunbound '*terminal-read-stream*)
+    (makunbound '*terminal-read-open-object*)
+    (clear-input *debug-io*) ; because the user did not expect a break loop
+    (let* ((*break-count* (1+ *break-count*))
+           (stream (make-synonym-stream '*debug-io*))
+           (*standard-input* stream)
+           (*standard-output* stream)
+           (*frame-limit1* (frame-limit1 13))
+           (*frame-limit2* (frame-limit2))
+           (*debug-mode* *debug-mode*)
+           (*debug-frame*
+            (frame-down-1 (frame-up-1 *frame-limit1* *debug-mode*)
+                          *debug-mode*))
+           (commands-list (commands may-continue commandsr)))
+      (driver
+       ;; build driver frame and repeat #'lambda (infinitely; ...)
+       #'(lambda ()
+           (case (catch 'debug    ; catch (throw 'debug ...) and analyse
+                   ;; ANSI CL wants an ABORT restart to be available.
+                   (with-restarts ((ABORT () (throw 'debug 'continue)))
+                     ;; build environment *debug-frame*
+                     ;; which is valid/equal for/to *debug-frame*
+                     (same-env-as *debug-frame*
+                       #'(lambda ()
+                           (if (read-eval-print ; read-eval-print INPUT-line
+                                 (string-concat (prompt-start) (prompt-break)
+                                                (prompt-body)
+                                                (if *tl-syntax-on* "t" "c")
+                                                (prompt-finish))
+                                  commands-list)
+                             ;; T -> #<EOF>
+                             ;; NIL -> form is already evaluated;
+                             ;;        result has been printed
+                             (throw 'debug (if may-continue 'quit 'unwind)))))))
+             ((print-error) (print-error condition))
+             ((inspect-error) (inspect condition))
+             ((unwind) (go unwind))
+             ((abort-to-top) (go abort-to-top))
+             ((quit)            ; reached only if may-continue is T
+              (if continuable
+                (go quit)
+                (invoke-restart-interactively may-continue)))
+             (t )))))           ; other cases, especially continue
+    unwind (unwind-to-driver nil)
+    abort-to-top (unwind-to-driver t)
+    quit))
+
+(setq *break-driver* #'break-loop)
+
+#t}
+
+
+;; The following code is from clisp/src/reploop.lisp lines 621-697.
+;; We make a small correction to prompt string, passed to read-eval-print function
+#t{
+
+;;;--------------------------------------------------------------------------
+;;;        convenient Stepper. (runs only if compiled!)
+
+(defun step-hook-fn (form &optional (env *toplevel-environment*))
+  (let ((*step-level* (1+ *step-level*)))
+    (when (>= *step-level* *step-quit*) ; while *step-level* >= *step-quit*
+      (if (and *step-watch* (funcall *step-watch*)) ; and no Breakpoint,
+        (setq *step-quit* most-positive-fixnum)
+        (return-from step-hook-fn       ; the Stepper remains passive
+          (evalhook form nil nil env)))) ; (e.g. it simply evaluates the Form)
+    (tagbody
+      (let* ((stream (make-synonym-stream '*debug-io*))
+             (*standard-input* stream)
+             (*standard-output* stream)
+             (*frame-limit1* (frame-limit1 11))
+             (*frame-limit2* (frame-limit2))
+             (*debug-mode* *debug-mode*)
+             (*debug-frame*
+              (frame-down-1 (frame-up-1 *frame-limit1* *debug-mode*)
+                            *debug-mode*))
+             (commands-list (commands nil (commands4))))
+        (fresh-line #|*debug-io*|#)
+        (write-string (TEXT "step ") #|*debug-io*|#)
+        (write *step-level* #|:stream *debug-io*|#)
+        (write-string " --> " #|*debug-io*|#)
+        (write form #|:stream *debug-io*|# :length 4 :level 3)
+        (loop
+          (multiple-value-bind (what watchp)
+              (catch 'stepper
+                ;; catch the (throw 'stepper ...) and analyse ...
+                (driver
+                  ;;  build driver frame and repeat #'lambda (infinitely ...)
+                  #'(lambda ()
+                      ;; catch the (throw 'debug ...) and analyse
+                      (case
+                          (catch 'debug
+                            ;; ANSI CL wants an ABORT restart to be available.
+                            (with-restarts ((ABORT () (throw 'debug 'continue)))
+                              (same-env-as *debug-frame*
+                                ;; build environment *debug-frame* that
+                                ;; is valid/equal for/to *debug-frame*
+                                #'(lambda ()
+                                    (if (read-eval-print ; get/read INPUT-line
+                                         (string-concat (prompt-start) (prompt-break)
+                                                        (prompt-body)
+                                                        (if *tl-syntax-on* "t" "c")
+                                                        (prompt-finish))
+                                          commands-list)
+                                      ;; T -> #<EOF>
+                                      (go continue)
+                                      ;; NIL -> form is already evaluated;
+                                      ;;        result has been printed
+                                      #|(throw 'debug 'continue)|#
+                                      )))))
+                        ((unwind) (go unwind))
+                        ((abort-to-top) (go abort-to-top))
+                        (t ))))) ; other cases, especially continue
+            (when watchp
+              (let ((form (read-form (TEXT "condition when to stop: "))))
+                (setq *step-watch*
+                      ;; function which evaluates 'form' in/with *debug-frame*
+                      (eval-at *debug-frame* `(function (lambda () ,form))))))
+            (case what
+              (into (go into))
+              (over (go over))
+              (over-this-level (go over-this-level))
+              (continue (go continue))))))
+     unwind (unwind-to-driver nil)
+     abort-to-top (unwind-to-driver t)
+     into
+      (return-from step-hook-fn
+        (step-values
+         (multiple-value-list (evalhook form #'step-hook-fn nil env))))
+     over-this-level
+      (setq *step-quit* *step-level*)   ; keep the Stepper sleeping
+     over
+      (return-from step-hook-fn
+        (step-values
+         (multiple-value-list (evalhook form nil nil env))))
+     continue
+      (setq *step-quit* 0)
+      (go over))))
+
+#t}

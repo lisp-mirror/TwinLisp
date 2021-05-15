@@ -1,0 +1,1207 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+inside "TWINLISP"
+
+
+struct LevelInfo {
+    blockName
+    implScope
+    explScopeWarn
+    isTopLevel
+    _lowerLevelFuncName {nil}
+    _lowerLevelGenFuncName {nil}
+    _nickToRealNames
+    currImplVar {[]}
+    newVars {[]}
+    _lowerLevelImplVar {[]}
+    }
+
+def makeLevelInfo(:blockName->blockName=nil, :implScope->implScope=nil
+                  :isTopLevel->isTopLevel=t, :explScopeWarn->explScopeWarn=nil
+                  :nickToRealNames->nickToRealNames=nil) {
+    &make-LevelInfo(:blockName=blockName, :implScope=implScope
+                    :explScopeWarn=explScopeWarn, :isTopLevel=isTopLevel
+                    :_nickToRealNames=if (nickToRealNames) {nickToRealNames._copy_()}
+                                      else {TWL_METH_NICKNAMES._copy_()}) }
+
+meth lowerFuncLevel(li==LevelInfo) {
+    if (not li._lowerLevelFuncName) {
+        error("Programming error: function name should be set before calling LevelInfo.lowerFuncLevel") }
+    funcName = li._lowerLevelFuncName
+    li._lowerLevelFuncName = nil
+    lowerLevel = li.lowerMacLevel()
+    lowerLevel.blockName = funcName
+    lowerLevel.implScope = li.implScope
+    lowerLevel}
+
+meth lowerGenFuncMethLevel(li==LevelInfo) {
+    if (not li._lowerLevelGenFuncName) {
+        error("Programming error: generic function name should be set before calling LevelInfo.lowerGenFuncMethLevel") }
+    gfuncName = li._lowerLevelGenFuncName
+    lowerLevel = li.lowerMacLevel()
+    lowerLevel.blockName = gfuncName
+    lowerLevel.implScope = li.implScope
+    lowerLevel}
+
+meth lowerLambdaLevel(li==LevelInfo) {
+    lowerLevel = li.lowerMacLevel()
+    lowerLevel.implScope = li.implScope
+    lowerLevel}
+
+meth lowerRegLevel(li==LevelInfo) {
+    lowerLevel = makeLevelInfo(:blockName=li.blockName
+                               :implScope=li.implScope
+                               :isTopLevel=nil
+                               :explScopeWarn=li.explScopeWarn
+                               :nickToRealNames=li._nickToRealNames)
+    lowerLevel.currImplVar = li._lowerLevelImplVar + li.currImplVar
+    li._lowerLevelImplVar = []
+    lowerLevel}
+
+meth lowerMacLevel(li==LevelInfo) {
+    lowerLevel = makeLevelInfo(:blockName=li.blockName
+                               :implScope=nil
+                               :isTopLevel=nil
+                               :explScopeWarn=li.explScopeWarn
+                               :nickToRealNames=li._nickToRealNames)
+    lowerLevel.currImplVar = li._lowerLevelImplVar
+    li._lowerLevelImplVar = []
+    lowerLevel}
+
+meth addSymbSynonym(li==LevelInfo,nickName,realName) {
+    li._nickToRealNames[nickName] = realName }
+
+meth getRealSymbol(li==LevelInfo,symb) {
+    if (li._nickToRealNames.has_key(symb)) { li._nickToRealNames[symb] }
+    else { symb }}
+
+meth appImplVarForLowerLevel(li==LevelInfo,symbList) {
+    li._lowerLevelImplVar.extend(symbList) }
+
+
+def _formSymbAsImplVarForLowerLevel(symbList,form) {
+    tf = form
+    if (tf[0]==SHORTCUT_TYPE) {
+        tf = form
+        do () (tf[0]!=SHORTCUT_TYPE) {
+            tf = tf[2] }}
+    if (tf[0]==ATOM_TYPE) {
+        symbList.append(tf[1]) }}
+
+
+def _formSymbAsImplVar(level,form) {
+    tf = form
+    if (tf[0]==SHORTCUT_TYPE) {
+        tf = form
+        do () (tf[0]!=SHORTCUT_TYPE) {
+            tf = tf[2] }}
+    case (tf[0])
+    is (FORM_TYPE) {
+        if (tf[1][0]==~[ATOM_TYPE,BIN_OPERS["@"][0]]) {
+            for (innerForm,tf[1][1->]) {
+                _formSymbAsImplVar(level,innerForm) }}}
+    is (ATOM_TYPE) {
+        if (level.implScope) {
+            if ((level.currImplVar.count(tf[1])==0) and (tf[1].count(#\:)==0)) {
+                level.currImplVar.append(tf[1])
+                level.newVars.append(tf[1]) }}
+        else {
+            if (level.explScopeWarn and (level.currImplVar.count(tf[1])==0)) {
+                signalSyntaxError("Assignment to unknown variable '~A'. You have to use 'let'-type constructs, or declare variable global." % tf[1]) }}}}
+
+
+def _macLambdaListForm(elems,level) {
+    form = ~[FORM_TYPE,[]]
+    symbList = []
+    do (ind=0, option="no-option") (ind>=len(elems)) {
+        elemFound @ ind = skipElems([WHITE_ELEM,","],ind,elems,nil)
+        if (not elemFound) { break }
+        if ((elems[ind].type==SYMB_ELEM) and (MAC_LAMBDA_LIST_OPTIONS.count(elems[ind].value)!=0)) {
+            if ((elems[ind].value!="&whole") and (elems[ind].value!="&environment")) {
+                option = elems[ind].value }
+            form[1].append(~[ATOM_TYPE,elems[ind].value])
+            ind += 1 }
+        elif (elems[ind].type==".") {
+            brackInd = getRequiredElemInd("(",ind+1,elems)
+            trueVal @ innerLambdaListForm @ ind = _procSpecificList(brackInd,elems,level,MAC_LAMBDA_LIST)
+            form[1].extend(innerLambdaListForm) }
+        elif (elems[ind].type=="*") {
+            if ((option=="no-option") or (option=="&optional")) {
+                option = "&rest"
+                form[1].append(~[ATOM_TYPE,"&rest"]) }
+            elif (option!="&rest") {
+                signalSyntaxError("The '&rest' parameter on line ~D, position ~D, cannot follow option '~A'" % ~[elems[ind].lineNum,elems[ind].start,option]) }
+            restForm @ ind = getOneForm(ind+1,elems,level,nil)
+            form[1].append(restForm) }
+        elif (elems[ind].type=="**") {
+            if ((option=="no-option") or (option=="&optional")) {
+                option = "&rest"
+                form[1].append(~[ATOM_TYPE,"&body"]) }
+            elif (option!="&rest") {
+                signalSyntaxError("The '&body' parameter on line ~D, position ~D, cannot follow option '~A'" % ~[elems[ind].lineNum,elems[ind].start,option]) }
+            restForm @ ind = getOneForm(ind+1,elems,level,nil)
+            form[1].append(restForm) }
+        else {
+            keyPresent @ arrowInd = getElemIndInOperExpr("->",ind,elems)
+            svarPresent=questInd=keyForm=svarForm=svarFormEnd=nil
+            if (keyPresent) {
+                keyForm = getOneForm(0,elems[ind->arrowInd],level,nil)
+                if (not keyForm) { signalSyntaxError("Missing a keyword before '->' on line ~D, position ~D" % ~[elems[arrowInd].lineNum,elems[arrowInd].start]) }
+                if ((option=="no-option") or (option=="&optional") or (option=="&rest")) {
+                    option = "&key"
+                    form[1].append(~[ATOM_TYPE,"&key"]) }
+                elif (option!="&key") {
+                    signalSyntaxError("The '&key' parameter on line ~D, position ~D, cannot follow option '~A'" % ~[elems[ind].lineNum,elems[ind].start,option]) }
+                svarPresent @ questInd = getElemIndInOperExpr("=?",arrowInd+1,elems) }
+            else {
+                svarPresent @ questInd = getElemIndInOperExpr("=?",ind,elems) }
+            if (svarPresent) {
+                svarForm @ svarFormEnd = getOneForm(questInd+1,elems,level,nil)
+                if (not svarForm) { signalSyntaxError("Missing a variable name after '=?' on line ~D, position ~D" % ~[elems[questInd].lineNum,elems[questInd].start]) }
+                if (option=="no-option") {
+                    option = "&optional"
+                    form[1].append(~[ATOM_TYPE,"&optional"]) }
+                elif (option=="&rest") {
+                    option = "&key"
+                    form[1].append(~[ATOM_TYPE,"&key"]) }
+                elif ((option!="&optional") and (option!="&key")) {
+                    signalSyntaxError("'=?' on line ~D, position ~D, has no sense after option '~A'" % ~[elems[questInd].lineNum,elems[questInd].start,option]) }}
+            if (keyPresent and svarPresent) {
+                varForms = getFormsSeparByElem("=",0,elems[arrowInd+1->questInd],level)
+                _formSymbAsImplVarForLowerLevel(symbList,varForms[0])
+                _formSymbAsImplVarForLowerLevel(symbList,svarForm)
+                ind = svarFormEnd
+                comcase (len(varForms))
+                is (1) { form[1].append(~[FORM_TYPE,[~[FORM_TYPE,[keyForm,varForms[0]]],
+                                                     ~[ATOM_TYPE,LISP_NIL],svarForm]]) }
+                is (2) { form[1].append(~[FORM_TYPE,[~[FORM_TYPE,[keyForm,varForms[0]]],
+                                                     varForms[1],svarForm]]) }}
+            elif ((not keyPresent) and svarPresent) {
+                varForms = getFormsSeparByElem("=",0,elems[ind->questInd],level)
+                _formSymbAsImplVarForLowerLevel(symbList,varForms[0])
+                _formSymbAsImplVarForLowerLevel(symbList,svarForm)
+                ind = svarFormEnd
+                comcase (len(varForms))
+                is (1) { form[1].append(~[FORM_TYPE,[varForms[0],~[ATOM_TYPE,LISP_NIL],svarForm]]) }
+                is (2) { form[1].append(~[FORM_TYPE,[varForms[0],varForms[1],svarForm]]) }}
+            elif (keyPresent and (not svarPresent)) {
+                varForms @ ind = getFormsSeparByElem("=",arrowInd+1,elems,level)
+                comcase (len(varForms))
+                is (1) { form[1].append(~[FORM_TYPE,[~[FORM_TYPE,[keyForm,varForms[0]]]]]) }
+                is (2) { form[1].append(~[FORM_TYPE,[~[FORM_TYPE,[keyForm,varForms[0]]],varForms[1]]]) }}
+            elif ((not keyPresent) and (not svarPresent)) {
+                varForms @ ind = getFormsSeparByElem("=",ind,elems,level)
+                _formSymbAsImplVarForLowerLevel(symbList,varForms[0])
+                comcase (len(varForms))
+                is (1) { form[1].append(varForms[0]) }
+                is (2) {
+                    case (option)
+                    is ("no-option") {
+                        option = "&optional"
+                        form[1].append(~[ATOM_TYPE,"&optional"]) }
+                    is ("&rest") {
+                        option = "&key"
+                        form[1].append(~[ATOM_TYPE,"&key"]) }
+                    is ("&allow-other-keys") {
+                        option = "&aux"
+                        form[1].append(~[ATOM_TYPE,"&aux"]) }
+                    form[1].append(~[FORM_TYPE,[varForms[0],varForms[1]]]) }}}}
+    level.appImplVarForLowerLevel(symbList)
+    form}
+
+
+def _specLambdaListForm(elems,level) {
+    form = ~[FORM_TYPE,[]]
+    symbList = []
+    do (ind=0) (ind>=len(elems)) {
+        elemFound @ ind = skipElems([WHITE_ELEM,","],ind,elems,nil)
+        if (not elemFound) { break }
+        if (((elems[ind].type==SYMB_ELEM) and \
+             (MAC_LAMBDA_LIST_OPTIONS.count(elems[ind].value)!=0)) or \
+                case (elems[ind].type) is (".","*","**") {t} else {nil}) {
+            ; current and following elements are like those in a lambda-list
+            form[1].extend(_macLambdaListForm(elems[ind->],level)[1])
+            break }
+        eqSignPresent @ eqSignInd = getElemIndInOperExpr("==",ind,elems)
+        if (  if (eqSignPresent) {
+                  not getElemIndInOperExpr("=",0,elems[ind->eqSignInd])}
+              else {nil}) {
+            varForms @ ind = getFormsSeparByElem("==",ind,elems,level)
+            _formSymbAsImplVarForLowerLevel(symbList,varForms[0])
+            comcase (varForms.len())
+            is (1) { form[1].append(varForms[0]) }
+            is (2) { form[1].append(~[FORM_TYPE,[varForms[0],varForms[1]]]) }}
+        else {
+            if (getElemIndInOperExpr("=",0,elems[ind->]) or \
+                    getElemIndInOperExpr("->",0,elems[ind->]) or \
+                    getElemIndInOperExpr("=?",0,elems[ind->])) {
+                ; current and following elements are like those in a lambda-list
+                form[1].extend(_macLambdaListForm(elems[ind->],level)[1])
+                break }
+            else {
+                varForm @ ind = getOneForm(ind,elems,level,nil)
+                if (varForm) {
+                    _formSymbAsImplVarForLowerLevel(symbList,varForm)
+                    form[1].append(varForm) }}}}
+    level.appImplVarForLowerLevel(symbList)
+    form}
+
+
+def _letListForm(innerElems,level) {
+    form = ~[FORM_TYPE,[]]
+    symbList = []
+    do (ind=0) (ind>=len(innerElems)) {
+        elemFound @ ind = skipElems([WHITE_ELEM,","],ind,innerElems,nil)
+        if (not elemFound) { break }
+        forms @ ind = getFormsSeparByElem("=",ind,innerElems,level)
+        _formSymbAsImplVarForLowerLevel(symbList,forms[0])
+        comcase (len(forms))
+        is (2) { form[1].append(~[FORM_TYPE,[forms[0],forms[1]]]) }
+        is (1) { form[1].append(forms[0]) }}
+    level.appImplVarForLowerLevel(symbList)
+    form}
+
+
+def _doVarListForm(innerElems,level) {
+    form = ~[FORM_TYPE,[]]
+    symbList = []
+    do (ind=0) (ind>=len(innerElems)) {
+        stepForm @ arrowInd @ end = getFormAfterElem("->",ind,innerElems,level)
+        if (stepForm) {
+            forms = getFormsSeparByElem("=",0,innerElems[ind->arrowInd],level)
+            comcase (len(forms))
+            is (2) { form[1].append(~[FORM_TYPE,[forms[0],forms[1],stepForm]]) }
+            is (1) { form[1].append(~[FORM_TYPE,[forms[0],~[ATOM_TYPE,LISP_NIL],stepForm]]) }}
+        else {
+            forms @ end = getFormsSeparByElem("=",ind,innerElems,level)
+            _formSymbAsImplVarForLowerLevel(symbList,forms[0])
+            comcase (len(forms))
+            is (2) { form[1].append(~[FORM_TYPE,[forms[0],forms[1]]]) }
+            is (1) { form[1].append(forms[0]) }}
+        elemFound @ ind = skipElems([WHITE_ELEM,","],end,innerElems,nil)
+        if (not elemFound) { break }}
+    level.appImplVarForLowerLevel(symbList)
+    form}
+
+
+def _procName(start,elems,level,onSameLine) {
+    elemFound @ ind = getRequiredElemInd2(SYMB_ELEM,start,elems,onSameLine)
+    if (elemFound) {
+        return t @ [~[ATOM_TYPE,level.getRealSymbol(elems[ind].value)]] @ ind+1 }
+    elemFound @ ind = getShortcutInd(start,elems,onSameLine)
+    if (elemFound) {
+        do () (not elemFound) {
+            elemFound @ ind = getShortcutInd(ind+1,elems) }
+        ind = getRequiredElemInd(SYMB_ELEM,ind,elems)
+        elems[ind].value = level.getRealSymbol(elems[ind].value)
+        form = getOneForm(0,elems[start->ind+1],level,nil)
+        return t @ [form] @ ind+1 }
+    elemFound @ ind = getRequiredElemInd2(STR_START_ELEM,start,elems,onSameLine)
+    if (elemFound) {
+        strAtom @ end = getStringAtom(ind,elems)
+        return t @ [strAtom] @ end }
+    elemFound @ ind = getRequiredElemInd2(":",start,elems,onSameLine)
+    if (elemFound) {
+        ind = getRequiredElemInd(SYMB_ELEM,ind+1,elems)
+        return t @ [~[ATOM_TYPE,":"+elems[ind].value]] @ ind+1 }
+    nil @ [~[ATOM_TYPE,LISP_NIL]] @ start}
+
+
+def procName(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    _procName(start,elems,level,t) }
+
+def procName2(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    _procName(start,elems,level,nil) }
+
+def procFunName(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    elemFound @ ind = getRequiredElemInd2(SPEC_SYMB_ELEM,start,elems,nil)
+    isSetter @ ind = if (elemFound and (elems[ind].value==SETTER_SPEC_SYMB)) { t @ ind+1 }
+                     else { nil @ ind }
+    succ @ formList @ end = _procName(ind,elems,level,nil)
+    level._lowerLevelFuncName = formList[0][1]
+    if (isSetter) { succ@ [~[FORM_TYPE,[~[ATOM_TYPE,SETTER_FUNC],formList[0]]]] @ end }
+    else { succ @ formList @ end }}
+
+def procGenFunName(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    elemFound @ ind = getRequiredElemInd2(SPEC_SYMB_ELEM,start,elems,nil)
+    isSetter @ ind = if (elemFound and (elems[ind].value==SETTER_SPEC_SYMB)) { t @ ind+1 }
+                     else { nil @ ind }
+    succ @ formList @ end = _procName(ind,elems,level,nil)
+    level._lowerLevelGenFuncName = formList[0][1]
+    if (isSetter) { succ@ [~[FORM_TYPE,[~[ATOM_TYPE,SETTER_FUNC],formList[0]]]] @ end }
+    else { succ @ formList @ end }}
+
+def procFunNameFromLevelInfo(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    funcName = level.blockName
+    if (not funcName) {
+        errorLineNum = if (start<len(elems)) { elems[start].lineNum }
+                       else{ if (len(elems)==0) { signalSyntaxError("Function name is underfined") }
+                             else { elems[-1].lineNum }}
+        signalSyntaxError("Function name on line ~D is underfined" % errorLineNum) }
+    else {
+        t @ [~[ATOM_TYPE,funcName]] @ start }}
+
+
+def procDoTestResultList(start,elems,level,addLineNums) {
+    ind = handle { getRequiredElemInd("(",start,elems,nil) }
+          cond &tl-syntax-error { return nil @ [~[FORM_TYPE,[~[ATOM_TYPE,LISP_NIL]]]] @ start }
+    innerElems @ ind = getElemsInBrackets(ind,elems)
+    forms = getForms(innerElems,level,addLineNums)
+    if (len(forms)==0) {
+        forms = [~[ATOM_TYPE,LISP_NIL]] }
+    t @ [~[FORM_TYPE,forms]] @ ind+1 }
+
+
+def procOperExpr(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    form @ end = getOneForm(start,elems,level,nil)
+    if (form) { t @ [form] @ end }
+    else { nil @ [~[FORM_TYPE,[]]] @ start }}
+
+
+def _operExprInBrack(start,elems,level,addLineNums,singleExpr) {
+    brackInd = handle { getRequiredElemInd("(",start,elems) }
+               cond &tl-syntax-error { return nil @ [~[FORM_TYPE,[]]] @ start }
+    innerElems @ ind = getElemsInBrackets(brackInd,elems)
+    forms = getForms(innerElems,level,addLineNums)
+    if (len(forms)==0) {
+        signalSyntaxError("Missing form(s) in brackets, starting line ~D, position ~D" % ~[elems[brackInd].lineNum,elems[brackInd].start]) }
+    elif (singleExpr and (len(forms)>1)) {
+        signalSyntaxError("Expect one form in brackets, starting line ~D, position ~D, but got ~D forms" % ~[elems[brackInd].lineNum,elems[brackInd].start,len(forms)]) }
+    t @ forms @ ind+1 }
+
+
+def procOperExprInBrack(start,elems,level,addLineNums) {
+    _operExprInBrack(start,elems,level,addLineNums,t) }
+
+
+def procMultOperExprInBrack(start,elems,level,addLineNums) {
+    _operExprInBrack(start,elems,level,addLineNums,nil) }
+
+
+def _procSpecificList(start,elems,level,listType) {
+    ind = handle { getRequiredElemInd("(",start,elems,nil) }
+          cond &tl-syntax-error { return nil @ [~[FORM_TYPE,[]]] @ start }
+    innerElems @ ind = getElemsInBrackets(ind,elems)
+    form =  case (listType)
+            is (LAMBDA_LIST,MAC_LAMBDA_LIST) {
+                _macLambdaListForm(innerElems,level) }
+            is (LET_LIST) {
+                _letListForm(innerElems,level) }
+            is (DO_VAR_LIST) {
+                _doVarListForm(innerElems,level) }
+            is (SPEC_LAMBDA_LIST) {
+                _specLambdaListForm(innerElems,level) }
+    t @ [form] @ ind+1 }
+
+
+def procDoVarList(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    _procSpecificList(start,elems,level,DO_VAR_LIST) }
+
+def procLetList(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    _procSpecificList(start,elems,level,LET_LIST) }
+
+def procLambdaList(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    _procSpecificList(start,elems,level,LAMBDA_LIST) }
+
+def procMacLambdaList(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    _procSpecificList(start,elems,level,MAC_LAMBDA_LIST) }
+
+def procSpecLambdaList(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    _procSpecificList(start,elems,level,SPEC_LAMBDA_LIST) }
+
+
+def _procBlock(start,elems,level,addLineNums) {
+    ind = handle { getRequiredElemInd("{",start,elems,nil) }
+          cond &tl-syntax-error { return nil @ [] @ start }
+    innerElems @ ind = getElemsInBrackets(ind,elems)
+    t @ getForms(innerElems,level,addLineNums) @ ind+1 }
+
+def procBodyBlock(start,elems,level,addLineNums) {
+    _procBlock(start,elems,level.lowerRegLevel(),addLineNums) }
+
+def procMacBodyBlock(start,elems,level,addLineNums) {
+    _procBlock(start,elems,level.lowerMacLevel(),addLineNums) }
+
+def procFunBodyBlock(start,elems,level,addLineNums) {
+    _procBlock(start,elems,level.lowerFuncLevel(),addLineNums) }
+
+def procLambdaBodyBlock(start,elems,level,addLineNums) {
+    _procBlock(start,elems,level.lowerLambdaLevel(),addLineNums) }
+
+def procGenFunMethBodyBlock(start,elems,level,addLineNums) {
+    _procBlock(start,elems,level.lowerGenFuncMethLevel(),addLineNums) }
+
+
+def _letLikeElemsInBraces(start,elems) {
+    ind = handle { getRequiredElemInd("{",start,elems,nil) }
+          cond &tl-syntax-error { return nil @ [] @ start }
+    innerElems @ end = getElemsInBrackets(ind,elems)
+    t @ _letListForm(innerElems,makeLevelInfo())[1] @ end+1 }
+
+def procClassOptions(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums),ignore(level))
+    _letLikeElemsInBraces(start,elems) }
+
+def procStructOptions(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums),ignore(level))
+    _letLikeElemsInBraces(start,elems) }
+
+
+def _funCallLikeElemsInBraces(start,elems,level,slotNameAtom) {
+    ind = handle { getRequiredElemInd("{",start,elems,nil) }
+          cond &tl-syntax-error { return nil @ [] @ start }
+    form @ end = funcCall(ind,elems,level,slotNameAtom)
+    t @ form[1] @ end }
+
+def procClassSlotsList(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    form = ~[FORM_TYPE,[]]
+    brackInd = handle { getRequiredElemInd("{",start,elems,nil) }
+               cond &tl-syntax-error { return nil @ [form] @ start }
+    innerElems @ end = getElemsInBrackets(brackInd,elems)
+    do (ind=0) (ind>=len(innerElems)) {
+        slPresent @ slName @ ind = _procName(ind,innerElems,level,nil)
+        if (slPresent) {
+            optPresent @ optForms @ ind = _funCallLikeElemsInBraces(ind,innerElems,level,slName[0])
+            if (optPresent) { form[1].append(~[FORM_TYPE,optForms]) }
+            else { form[1].append(slName[0]) }}
+        else {
+            elemFound @ ind = skipElems([WHITE_ELEM,COMM_ELEM,","],ind,innerElems,nil)
+            if (not elemFound) { break }}}
+    t @ [form] @ end+1 }
+
+def procStructSlots(start,elems,level,addLineNums) {
+    strPres @ form @ end = procClassSlotsList(start,elems,level,addLineNums)
+    strPres @ form[0][1] @ end }
+
+
+def procMethQualif(start,elems,level,addLineNums) {
+    declare(ignore(addLineNums))
+    brackInd = do (ind=start->ind+1) (ind>=elems.len(),nil) {
+                   if (BRACKETS.has_key(elems[ind].type)) { break ind }}
+    if (brackInd) {
+        case (elems[brackInd].type)
+        is ("(","{") {
+            forms = getForms(elems[start->brackInd],level,nil)
+            if (forms) { t @ forms @ brackInd }
+            else { nil @ [] @ brackInd }}
+        else {
+            signalSyntaxError("Missing elements in {-brackets after position ~D, on line ~D" % ~[elems[brackInd].start,elems[brackInd].lineNum]) }}
+    else {
+        signalSyntaxError("Missing elements in {-brackets after position ~D, on line ~D" % ~[elems[elems.len()-1].start,elems[elems.len()-1].lineNum]) }}
+
+
+const( BLOCK_FUNCS = {FUN_NAME -> #'procFunName
+                      GEN_FUN_NAME -> #'procGenFunName
+                      NAME -> #'procName
+                      NAME2 -> #'procName2
+                      FUN_NAME_FROM_LEVEL -> #'procFunNameFromLevelInfo
+                      LAMBDA_LIST -> #'procLambdaList
+                      MAC_LAMBDA_LIST -> #'procMacLambdaList
+                      SPEC_LAMBDA_LIST -> #'procSpecLambdaList
+                      MAC_BODY_BLOCK -> #'procMacBodyBlock
+                      FUN_BODY_BLOCK -> #'procFunBodyBlock
+                      LAMBDA_BODY_BLOCK -> #'procLambdaBodyBlock
+                      GEN_FUN_METH_BODY_BLOCK -> #'procGenFunMethBodyBlock
+                      BODY_BLOCK -> #'procBodyBlock
+                      LET_LIST -> #'procLetList
+                      DO_VAR_LIST -> #'procDoVarList
+                      DO_TEST_RES_LIST -> #'procDoTestResultList
+                      OPER_EXPR -> #'procOperExpr
+                      OPER_EXPR_IN_BRACK -> #'procOperExprInBrack
+                      MULT_OPER_EXPR_IN_BRACK -> #'procMultOperExprInBrack
+                      STRUCT_SLOTS -> #'procStructSlots
+                      STRUCT_OPTIONS -> #'procStructOptions
+                      CLASS_SLOTS_LIST -> #'procClassSlotsList
+                      CLASS_OPTIONS -> #'procClassOptions
+                      METH_QUALIF -> #'procMethQualif} )
+
+
+def _isStructPresent(part,start,elems) {
+    if (part[0].typep('symbol)) {
+        blockFunc @ keyPresent = BLOCK_FUNCS[part[0]]
+        if (not keyPresent) { signalSyntaxError("Handling of block structure '~A' is not implemented." % part[0] )}
+        ; level info object here should be dummy
+        blockFunc.funcall(start,elems,makeLevelInfo(),nil) @ start @ part }
+    elif (AUX_SPEC_SYMB.count(part[0])!=0) {
+        handle {
+            ind = getRequiredElemInd(SPEC_SYMB_ELEM,start,elems,nil)
+            if (part[0]==elems[ind].value) { t @ ind+1 @ part[1->] }
+            else { nil @ start @ part }}
+        cond &tl-syntax-error {
+            nil @ start @ part }}
+    else {
+        signalSyntaxError("Programming error: inner forms' descriptions in TL_BLOCK should start from either AUX_SPEC_SYMB or a block structure symbol; instead got: ~A" % part) }}
+
+
+def _readBlockStructElems(blockDescr,firstElemInd,elems,level,addLineNums) {
+    forms = []
+    ind = firstElemInd
+    for (descr,blockDescr) {
+        isOptional = nil
+        multiple = nil
+        part = typecase (descr)
+               is (list) {
+                   for (opt,descr[1->]) {
+                        if (opt==OPTIONAL) { isOptional = t }
+                        elif (opt==MULT) { multiple = t }}
+                   descr[0]}
+               is (&or(symbol,vector)) {
+                   descr }
+               is (t) {
+                   error("Programming error: wrong element in Const.TL_BLOCK - ~A" % descr) }
+        typecase (part)
+        is (symbol) {
+            blockFunc @ keyPresent = BLOCK_FUNCS[part]
+            if (not keyPresent) { signalSyntaxError("Handling of block structure '~A' is not implemented." % part)}
+            partFound @ newForms @ ind = blockFunc.funcall(ind,elems,level,addLineNums)
+            if (partFound) {
+                if (multiple) {
+                    forms.append([newForms])
+                    do () (not partFound) {
+                        partFound @ newForms @ ind = blockFunc.funcall(ind,elems,level,addLineNums)
+                        if (partFound) { forms[-1].append(newForms) }}}
+                else {
+                    forms.append(newForms) }}
+            else {
+                if (isOptional) {
+                    forms.append(newForms) }
+                else {
+                    signalSyntaxError("Required '~A' part of a block structure is missing on line ~D" % ~[part,elems[ind].lineNum]) }}}
+        is (vector) {
+            partFound @ ind @ partToRead = _isStructPresent(part,ind,elems)
+            if (partFound) {
+                newForms @ ind = _readBlockStructElems(partToRead,ind,elems,level,addLineNums)
+                if (multiple) {
+                    forms.append([newForms])
+                    do () {
+                        partFound @ ind @ partToRead = _isStructPresent(part,ind,elems)
+                        if (partFound) {
+                            newForms @ ind = _readBlockStructElems(partToRead,ind,elems,level,addLineNums)
+                            forms[-1].append(newForms) }
+                        else {
+                            break }}}
+                else {
+                    forms.append(newForms) }}
+            else {
+                if (isOptional) {
+                    forms.append([]) }
+                else {
+                    signalSyntaxError("Required special symbol '~A' is missing on line ~D, position ~D" % ~[part[0],elems[ind].lineNum,elems[ind].start]) }}}
+        is (t) {
+            error("Programming error: wrong element in Const.TL_BLOCK - ~A" % part) }}
+    forms @ ind }
+
+
+def _descrProcessing(descr,blockParts) {
+    typecase (descr)
+    is (string) {
+        [~[ATOM_TYPE,descr]] }
+    is (integer) {
+        blockParts[descr] }
+    is (list) {
+        isOptional = nil
+        multiple = nil
+        partInd = descr[0]
+        descrInd = 1
+        do () {
+            if (descr[descrInd]==OPTIONAL) {
+                isOptional = t
+                descrInd = descrInd+1 }
+            elif (descr[descrInd]==MULT) {
+                multiple = t
+                descrInd = descrInd+1 }
+            else {
+                break }}
+        if (len(blockParts[partInd])==0) {
+            if (isOptional) {
+                if (len(descr)<=(descrInd+1)) { [] }
+                else { _descrProcessing(descr[descrInd+1],blockParts) }}
+            else {
+                error("Programming error: not optional element is empty in _writeBlockStructForm") }}
+        else {
+            if (multiple) {
+                for (part,blockParts[partInd],res=[])
+                    (res) {
+                    res.extend(_descrProcessing(descr[descrInd],part)) }}
+            else {
+                _descrProcessing(descr[descrInd],blockParts[partInd]) }}}
+    is (vector) {
+        [_writeBlockStructForm(descr,blockParts)] }
+    is (t) {
+        error("Programming error: description of unknown type in TL_BLOCK's form: ~A" % descr) }}
+
+
+def _writeBlockStructForm(formDescr,blockParts) {
+    for (descr,formDescr,form = ~[FORM_TYPE,[]])
+        (form) {
+        form[1].extend(_descrProcessing(descr,blockParts)) }}
+
+
+def getBlockForm(firstElemInd,elems,level,addLineNums) {
+    blockName = elems[firstElemInd].value
+    blockParts @ end = _readBlockStructElems(TL_BLOCK[blockName][0],
+                                             firstElemInd+1,elems,level,addLineNums)
+    _writeBlockStructForm(TL_BLOCK[blockName][1],blockParts) @ end }
+
+
+def getBracketedForm(indOpenBr,elems,level,addLineNums) {
+    innerElems @ indClosBr = getElemsInBrackets(indOpenBr,elems)
+    ~[FORM_TYPE,getForms(innerElems,level,addLineNums)] @ indClosBr+1 }
+
+
+def getSimpleArrayForm(start,elems,level) {
+    innerElems @ indClosBr = getElemsInBrackets(start,elems)
+    form = ~[FORM_TYPE,[~[ATOM_TYPE,MAKE_SIMPLE_ARRAY_FUNC]]]
+    initElems = getForms(innerElems,level,nil)
+    if (len(initElems)!=0) {
+        form[1].append(~[ATOM_TYPE,":initContent"])
+        form[1].append(~[FORM_TYPE,[~[ATOM_TYPE,MAKE_LIST_FUNC]]+initElems]) }
+    form @ indClosBr+1 }
+
+
+def getListForm(start,elems,level) {
+    innerElems @ indClosBr = getElemsInBrackets(start,elems)
+    form = ~[FORM_TYPE,[~[ATOM_TYPE,MAKE_LIST_FUNC]]]
+    form[1].extend(getForms(innerElems,level,nil))
+    form @ indClosBr+1 }
+
+
+def getFormAfterElem(elemType,start,elems,level) {
+    elemFound @ separInd = getElemIndInOperExpr(elemType,start,elems)
+    if (elemFound) {
+        form @ end = getOneForm(separInd+1,elems,level,nil)
+        if (not form) {
+            signalSyntaxError("Missing a form after '~A' on line ~D, position ~D" % ~[elems[separInd].type,elems[separInd].lineNum,elems[separInd].start]) }
+        form @ separInd @ end }
+    else {
+        nil @ nil @ separInd }}
+
+
+def getFormsSeparByElem(elemType,start,elems,level) {
+    forms = []
+    secondForm @ separInd @ end = getFormAfterElem(elemType,start,elems,level)
+    if (secondForm) {
+        firstForm = getOneForm(0,elems[start->separInd],level,nil)
+        if (firstForm) {
+            forms.append(firstForm) }
+        else {
+            signalSyntaxError("Missing a form before '~A' on line ~D, position ~D" % ~[elems[separInd].type,elems[separInd].lineNum,elems[separInd].start]) }
+        forms.append(secondForm) }
+    else {
+        firstForm @ end = getOneForm(start,elems,level,nil)
+        if (firstForm) { forms.append(firstForm) }}
+    forms @ end }
+    
+
+def getDictForm(start,elems,level) {
+    innerElems @ indClosBr = getElemsInBrackets(start,elems)
+    form = ~[FORM_TYPE,[~[ATOM_TYPE,MAKE_DICTIONARY_FUNC]]]
+    do (ind=0) (ind>=len(innerElems)) {
+        elemFound @ ind = skipElems([COMM_ELEM,WHITE_ELEM,","],ind,innerElems,nil)
+        if (not elemFound) { break }
+        forms @ ind = getFormsSeparByElem("->",ind,innerElems,level)
+        form[1].append(forms[0])
+        comcase (len(forms))
+        is (2) { form[1].append(forms[1]) }
+        is (1) { form[1].append(~[ATOM_TYPE,LISP_NIL]) }}
+    form @ indClosBr+1 }
+
+def getNFormsInBrack(start,elems,level,numForms) {
+    innerElems @ indClosBr = getElemsInBrackets(start,elems)
+    forms = getForms(innerElems,level,nil)
+    if (len(forms)==0) {
+        signalSyntaxError("Empty brackets, starting line ~D, position ~D" % ~[elems[start].lineNum,elems[start].start]) }
+    elif (len(forms)!=numForms) {
+        signalSyntaxError("Brackets, starting line ~D, position ~D, contain ~D forms instead of ~D" % ~[elems[start].lineNum,elems[start].start,len(forms),numForms]) }
+    forms @ indClosBr+1 }
+
+
+def getComplNumForm(start,elems,level) {
+    ind = getRequiredElemInd("(",start+1,elems)
+    forms @ end = getNFormsInBrack(ind,elems,level,2)
+    ~[FORM_TYPE,[~[ATOM_TYPE,MAKE_COMPLEX_NUM_FUNC],forms[0],forms[1]]] @ end }
+
+
+def funcCall(start,elems,level,lastForm) {
+    innerElems @ indClosBr = getElemsInBrackets(start,elems)
+    form = ~[FORM_TYPE,[]]
+    if (lastForm) { form[1].append(lastForm) }
+    do (ind=0) (ind>=len(innerElems)) {
+        elemFound @ ind = skipElems([WHITE_ELEM,","],ind,innerElems,nil)
+        if (not elemFound) { break }
+        if (innerElems[ind].type==".") {
+            brackInd = getRequiredElemInd("(",ind+1,innerElems)
+            innerListForm @ ind = funcCall(brackInd,innerElems,level,nil)
+            form[1].append(innerListForm) }
+        else {
+            forms @ ind = getFormsSeparByElem("=",ind,innerElems,level)
+            form[1].extend(forms) }}
+    form @ indClosBr+1 }
+
+
+def getitemFuncCall(start,elems,level,lastForm) {
+    form = ~[FORM_TYPE,[~[ATOM_TYPE,GET_ITEM_FUNC],lastForm]]
+    innerElems @ indClosBr = getElemsInBrackets(start,elems)
+    arrowPres @ arrowInd = getElemIndInOperExpr("->",0,innerElems)
+    form[1].append(
+        if (arrowPres) {
+            indexForm = ~[FORM_TYPE,[~[ATOM_TYPE,MAKE_SLICE_FUNC]]]
+            startForm = getOneForm(0,innerElems[0->arrowInd],level,nil)
+            endForm @ endEndForm = getOneForm(arrowInd+1,innerElems,level,nil)
+            elemFound @ ind = skipElems([WHITE_ELEM,","],endEndForm,innerElems,nil)
+            stepForm = if (elemFound) { getOneForm(ind,innerElems,level,nil) }
+                       else { nil }
+            if (startForm) { indexForm[1].append(startForm) }
+            else { indexForm[1].append(~[ATOM_TYPE,LISP_NIL]) }
+            if (endForm) { indexForm[1].append(endForm) }
+            else {
+                if (not startForm) {
+                       signalSyntaxError("No index present in brackets on line ~D, position ~D" % ~[elems[start].lineNum,elems[start].start]) }
+                indexForm[1].append(~[ATOM_TYPE,LISP_NIL]) }
+            if (stepForm) { indexForm[1].append(stepForm) }
+            else { indexForm[1].append(~[ATOM_TYPE,LISP_NIL]) }
+            indexForm}
+        else {
+            indexForms = getForms(innerElems,level,nil)
+            comcase (len(indexForms))
+            is (1) { indexForms[0] }
+            is (0) { signalSyntaxError("Expected index is missing in brackets on line ~D, position ~D" % ~[elems[start].lineNum,elems[start].start]) }
+            else { ~[FORM_TYPE,[~[ATOM_TYPE,MAKE_LIST_FUNC]]+indexForms] }} )
+    form @ indClosBr+1 }
+
+
+def slotOrFuncCall(start,elems,level,lastForm,addLineNums) {
+    nameInd = getRequiredElemInd(SYMB_ELEM,start+1,elems)
+    elemFound @ ind = skipElems([WHITE_ELEM],nameInd+1,elems)
+    if (elemFound) {
+        case (elems[ind].type)
+        is ("(") {
+            form @ ind = funcCall(ind,elems,level,lastForm)
+            form[1].insert(0,~[ATOM_TYPE,level.getRealSymbol(elems[nameInd].value)])
+            return form @ ind }
+        is ("{") {
+            return extendWithBodyBlock(ind,elems,level,
+                                       ~[FORM_TYPE,[~[ATOM_TYPE,level.getRealSymbol(elems[nameInd].value)],
+                                                    lastForm]],
+                                       addLineNums) }}
+    ~[FORM_TYPE,[~[ATOM_TYPE,GET_OBJ_SLOT_FUNC],lastForm,
+                 ~[SHORTCUT_TYPE, "'",
+                   ~[ATOM_TYPE,level.getRealSymbol(elems[nameInd].value)]]]] @ nameInd+1 }
+
+
+def packOrKeywName(start,elems,lastForm) {
+    if (lastForm) {
+        updatedLastForm = lastForm
+        packageNamePresent = nil
+        if (updatedLastForm[0]==ATOM_TYPE) {
+            updatedLastForm = ~[ATOM_TYPE,updatedLastForm[1]+elems[start].type]
+            packageNamePresent = t }
+        ind = getRequiredElemInd(SYMB_ELEM,start+1,elems)
+        if (packageNamePresent) { nil @ ~[ATOM_TYPE,updatedLastForm[1]+elems[ind].value] @ ind+1 }
+        else { ~[ATOM_TYPE,elems[start].type+elems[ind].value] @ updatedLastForm @ ind+1 }}
+    else {
+        ind = getRequiredElemInd(SYMB_ELEM,start+1,elems)
+        ~[ATOM_TYPE,elems[start].type+elems[ind].value] @ nil @ ind+1 }}
+
+
+def extendWithBodyBlock(start,elems,level,lastForm,addLineNums) {
+    trueVal @ forms @ end = procBodyBlock(start,elems,level,addLineNums)
+    form = lastForm
+    if (form[0]!=FORM_TYPE) { form = ~[FORM_TYPE,[form]] }
+    form[1].extend(forms)
+    form @ end }
+
+
+def getStringAtom(start,elems) {
+    do (atom=~[ATOM_TYPE, elems[start].value]
+        ind=start+1)
+        (ind>=len(elems)
+         signalSyntaxError("Cannot find the end of the string started on line ~D, position ~D" % ~[elems[start].lineNum,elems[start].start])) {
+        case (elems[ind].type)
+        is (LINE_END_ELEM) { ind = elems.growOnIndex(ind+1) }
+        is (STR_MID_ELEM) {
+            atom[1] += elems[ind].value
+            ind += 1 }
+        is (STR_END_ELEM) {
+            atom[1] += elems[ind].value
+            break atom @ ind+1 }
+        else {
+            error("Programming error: Before string ends, have an unexpected type of StrElem - '~A', on line ~D, position ~D" % ~[elems[ind].type,elems[ind].lineNum,elems[ind].start]) }}}
+
+
+def getCLispAtom(start,elems) {
+    do (atom=~[ATOM_TYPE,""]
+        ind=start+1)
+        (ind>=len(elems)
+         signalSyntaxError("Cannot find the end of the common lisp code started on line ~D, position ~D" % ~[elems[start].lineNum,elems[start].start])) {
+        case (elems[ind].type)
+        is (LINE_END_ELEM) { ind = elems.growOnIndex(ind+1) }
+        is (CLISP_MID_ELEM) {
+            atom[1] += elems[ind].value
+            ind += 1 }
+        is (CLISP_END_ELEM) {
+            atom[1] += elems[ind].value
+            break atom @ ind+1 }
+        else {
+            error("Programming error: Before Common Lisp code ends, have an unexpected type of StrElem - '~A', from line ~D, position ~D" % ~[elems[ind].type,elems[ind].lineNum,elems[ind].start]) }}}
+
+
+def twLispDirectiveProc(start,elems,level) {
+    case (elems[start].value)
+    is (TL_DIR_GLOBAL) {
+        ind = getRequiredElemInd(SYMB_ELEM,start+1,elems,nil)
+        if (level.currImplVar.count(elems[ind].value)==0) {
+            level.currImplVar.append(elems[ind].value) }
+        ind+1}
+    is (TL_DIR_LEXSCOPE) {
+        ind = getRequiredElemInd(SPEC_SYMB_ELEM,start+1,elems,nil)
+        if (elems[ind].value==TL_EXPL_SCOPE) { level.implScope = nil }
+        elif (elems[ind].value==TL_IMPL_SCOPE) { level.implScope = t }
+        else {
+            signalSyntaxError("Unexpected element '~A' on line ~D, position ~D" % ~[elems[ind].value,elems[ind].lineNum,elems[ind].start]) }
+        ind+1}
+    is (TL_DIR_USE) {
+        packName = ""
+        elemFound @ ind = getRequiredElemInd2(SYMB_ELEM,start+1,elems,nil)
+        if (elemFound) {
+            packName += elems[ind].value +":"
+            ind += 1 }
+        elemFound @ ind = getRequiredElemInd2(":",ind,elems,nil)
+        if (elemFound) {
+            packName += ":"
+            ind += 1 }
+        ind = getRequiredElemInd("{",ind,elems,nil)
+        innerElems @ ind = getElemsInBrackets(ind,elems)
+        end = ind+1
+        do (ind=0) (ind>=len(innerElems)) {
+            elemFound @ ind = skipElems([WHITE_ELEM,","],ind,innerElems,nil)
+            if (not elemFound) { break }
+            ind = getRequiredElemInd(SYMB_ELEM,ind,innerElems,nil)
+            symbName = innerElems[ind].value
+            if ((ind+1)<len(innerElems)) {
+                elemFound @ ind = getRequiredElemInd2("=",ind+1,innerElems) }
+            else {
+                elemFound = nil }
+            nickName = if (elemFound) {
+                          if ((ind+1)<len(innerElems)) {
+                              ind = getRequiredElemInd(SYMB_ELEM,ind+1,innerElems,nil) }
+                          else {
+                              signalSyntaxError("Expected element '~A', on line ~D is missing" % ~[SYMB_ELEM,innerElems[ind].lineNum]) }
+                          innerElems[ind].value }
+                       else {
+                           symbName }
+            level.addSymbSynonym(nickName,packName+symbName)
+            ind += 1 }
+        end}
+    else {
+        error("Handling of a TwinLisp directive '~A' on line ~D, position ~D, is not implemented, yet." % ~[elems[start].value,elems[start].lineNum,elems[start].start]) }}
+
+
+const( _COMMENT = :comment )
+const( _OP = :operator )
+const( _UN_OP = :&unar-oper )
+const( _UN_BIN_OP = :&unar-or-bin-oper )
+const( _BIN_OP = :&bin-oper )
+const( _EXPR = :expression )
+const( _SHORTCUT = :shortcut )
+const( _NONE = :none )
+
+def _lastOpExType(operAndExpr) {
+    if (len(operAndExpr)>0) { operAndExpr[-1][0] }
+    else { _NONE }}
+
+def getOperAndExpr(startInd,elems,level,addLineNums) {
+    do (operAndExpr=[],ind=startInd)
+        (ind>=len(elems)
+         operAndExpr @ ind) {
+        elemFound @ ind = skipElems([WHITE_ELEM],ind,elems) ; Does not go to the next line
+        if (not elemFound) { break operAndExpr @ ind }
+        el = elems[ind]
+        if ((el.type==",") or (el.type==LINE_END_ELEM)) {
+            break operAndExpr @ ind }
+        elif (el.type==COMM_ELEM) {
+            if (len(operAndExpr)==0) {
+                operAndExpr.append(~[_COMMENT,~[COMMENT_TYPE,el.value]])
+                ind += 1 }
+            break operAndExpr @ ind }
+        elif (el.type==SYMB_ELEM) {
+            operAndExpr.append(~[_EXPR,~[ATOM_TYPE,level.getRealSymbol(el.value)]])
+            ind += 1 }
+        elif ((el.type==NUM_ELEM) or (el.type==SYNT_STRUCT_ELEM)) {
+            operAndExpr.append(~[_EXPR,~[ATOM_TYPE,el.value]])
+            ind += 1 }
+        elif (el.type==STR_START_ELEM) {
+            atom @ ind = getStringAtom(ind,elems)
+            operAndExpr.append(~[_EXPR,atom]) }
+        elif (el.type==CLISP_START_ELEM) {
+            atom @ ind = getCLispAtom(ind,elems)
+            operAndExpr.append(~[_EXPR,atom]) }
+        elif ((el.type==":") or (el.type=="::")) {
+            lastForm = if (_lastOpExType(operAndExpr)==_EXPR) { operAndExpr[-1][1] }
+                       else { nil }
+            form @ lastForm @ ind = packOrKeywName(ind,elems,lastForm)
+            if (lastForm) { operAndExpr[-1] = ~[_EXPR,lastForm] }
+            if (form) { operAndExpr.append(~[_EXPR,form]) }}
+        elif (el.type==SPEC_SYMB_ELEM) {
+            if (TL_BLOCK.has_key(el.value)) {
+                form @ ind = getBlockForm(ind,elems,level,addLineNums)
+                operAndExpr.append(~[_EXPR,form]) }
+            elif (TL_DIRECT_SPEC_SYMB.count(el.value)!=0) {
+                ind = twLispDirectiveProc(ind,elems,level) }
+            else {
+                signalSyntaxError("Unexpected element '~A' on line ~D, position ~D" % ~[el.value,el.lineNum,el.start]) }}
+        elif (el.type=="~(") {
+            form @ ind = getBracketedForm(ind,elems,level,addLineNums)
+            operAndExpr.append(~[_EXPR,form]) }
+        elif (el.type=="~[") {
+            form @ ind = getListForm(ind,elems,level)
+            operAndExpr.append(~[_EXPR,form]) }
+        elif (el.type=="(") {
+            if (_lastOpExType(operAndExpr)==_EXPR) {
+                form @ ind = funcCall(ind,elems,level,operAndExpr[-1][1])
+                operAndExpr[-1] = ~[_EXPR,form] }
+            else {
+                forms @ ind = getNFormsInBrack(ind,elems,level,1)
+                operAndExpr.append(~[_EXPR,forms[0]]) }}
+        elif (el.type=="[") {
+            if (_lastOpExType(operAndExpr)==_EXPR) {
+                form @ ind = getitemFuncCall(ind,elems,level,operAndExpr[-1][1])
+                operAndExpr[-1] = ~[_EXPR,form] }
+            else {
+                form @ ind = getSimpleArrayForm(ind,elems,level)
+                operAndExpr.append(~[_EXPR,form]) }}
+        elif (el.type=="{") {
+            if (_lastOpExType(operAndExpr)==_EXPR) {
+                form @ ind = extendWithBodyBlock(ind,elems,level,operAndExpr[-1][1],addLineNums)
+                operAndExpr[-1] = ~[_EXPR,form] }
+            else {
+                form @ ind = getDictForm(ind,elems,level)
+                operAndExpr.append(~[_EXPR,form]) }}
+        elif ((el.type==".") and (_lastOpExType(operAndExpr)==_EXPR)) {
+            form @ ind = slotOrFuncCall(ind,elems,level,operAndExpr[-1][1],addLineNums)
+            operAndExpr[-1] = ~[_EXPR,form] }
+        elif (SHORTCUT_OPERS.has_key(el.type)) {
+            operAndExpr.append(~[_SHORTCUT,el])
+            ind += 1 }
+        elif (COMPL_NUM_OPER.count(el.type)!=0) {
+            form @ ind = getComplNumForm(ind,elems,level)
+            operAndExpr.append(~[_EXPR,form]) }
+        elif (UNAR_OPERS.has_key(el.type)) {
+            if (BIN_OPERS.has_key(el.type)) { operAndExpr.append(~[_UN_BIN_OP,el]) }
+            else { operAndExpr.append(~[_UN_OP,el]) }
+            ind += 1 }
+        elif (BIN_OPERS.has_key(el.type)) {
+            operAndExpr.append(~[_BIN_OP,el])
+            ind += 1 }
+        else {
+            signalSyntaxError("Unexpected element of type '~A' on line ~D at position ~D" % ~[el.type,el.lineNum,el.start]) }}}
+
+
+def _reduceBinaryOper(operStack,exprStack,nextOper) {
+    nextOpPrec = BIN_OPERS[nextOper.type][1]
+    do () (len(operStack)==0) {
+        lastOpType = operStack[-1][1].type
+        lastOpPrec = BIN_OPERS[lastOpType][1]
+        if ((lastOpPrec<nextOpPrec) or ((lastOpPrec==nextOpPrec) and \
+                ((BIN_OPERS[lastOpType][2]==LEFT_ASSOC) or (BIN_OPERS[lastOpType][2]==MULT_ARGS_ASSOC)))) {
+            reducedExpr = nil
+            if ((BIN_OPERS[lastOpType][2]==MULT_ARGS_ASSOC) and (exprStack[-2][0]==FORM_TYPE)) {
+                if (exprStack[-2][1][0]==~[ATOM_TYPE,BIN_OPERS[lastOpType][0]]) {
+                    reducedExpr = ~[exprStack[-2][0],exprStack[-2][1]+[exprStack[-1]]] }}
+            if (not reducedExpr) {
+                reducedExpr = ~[FORM_TYPE,[~[ATOM_TYPE,BIN_OPERS[lastOpType][0]]
+                                           exprStack[-2],exprStack[-1]]] }
+            exprStack.pop()
+            exprStack[-1] = reducedExpr
+            operStack.pop() }
+        else {
+            break }}}
+
+
+def _reduceUnaryOper(operStack,exprStack,expr) {
+    reducedExpr = expr
+    do () (len(operStack)==0) {
+        if (operStack[-1][0]==_UN_OP) {
+            funcName = UNAR_OPERS[operStack[-1][1].type][0]
+            reducedExpr = ~[FORM_TYPE,[~[ATOM_TYPE,funcName],reducedExpr]]
+            operStack.pop() }
+        else {
+            break }}
+    exprStack.append(reducedExpr) }
+
+
+def _reduceShorcut(operStack,exprStack,opex) {
+    reducedExpr = case (opex[0])
+                  is (_EXPR) { opex[1] }
+                  is (_BIN_OP,_UN_BIN_OP) {
+                      ~[ATOM_TYPE,BIN_OPERS[opex[1].type][0]] }
+                  is (_UN_OP) {
+                      ~[ATOM_TYPE,UNAR_OPERS[opex[1].type][0]] }
+    do () (len(operStack)==0) {
+        if (operStack[-1][0]==_SHORTCUT) {
+            reducedExpr = ~[SHORTCUT_TYPE,SHORTCUT_OPERS[operStack[-1][1].type],reducedExpr]
+            operStack.pop() }
+        else {
+            break }}
+    _reduceUnaryOper(operStack,exprStack,reducedExpr) }
+
+
+def _getFinalForm(operStack,exprStack,level) {
+    "This works with the assumption that only binary operators could have been left"
+    if (len(exprStack)==0) {
+        if (len(operStack)==0) {
+            return nil }
+        else {
+            signalSyntaxError("Missing expression(s) to apply operator '~A' on line ~D, position ~D" % ~[operStack[-1][1].type,operStack[-1][1].lineNum,operStack[-1][1].start]) }}
+    do () (len(operStack)==0) {
+        lastOpType = operStack[-1][1].type
+        reducedExpr = nil
+        if ((BIN_OPERS[lastOpType][2]==MULT_ARGS_ASSOC) and (exprStack[-2][0]==FORM_TYPE)) {
+            if (exprStack[-2][1][0]==~[ATOM_TYPE,BIN_OPERS[lastOpType][0]]) {
+                reducedExpr = ~[exprStack[-2][0],exprStack[-2][1]+[exprStack[-1]]] }}
+        if (not reducedExpr) {
+            if (lastOpType=="=") { _formSymbAsImplVar(level,exprStack[-2]) }
+            reducedExpr = ~[FORM_TYPE,[~[ATOM_TYPE,BIN_OPERS[lastOpType][0]],exprStack[-2],exprStack[-1]]] }
+        exprStack.pop()
+        exprStack[-1] = reducedExpr
+        operStack.pop() }
+    exprStack[-1]}
+
+
+def getOperForm(operAndExpr,level) {
+    "Takes mixture of expr's and oper's and puts 'em into expr, whos form is returned.
+    _SHORTCUT has precedence 0, and RIGHT_ASSOC. Note: _SHORTCUT changes the following oper to expr.
+    Looking at UNAR_OPERS we note that all unary operators are RIGHT_ASSOC. Since there are no LEFT_ASSOC unary operators, their precedence does not matter. So, here we'll assume that *all unary* operators are RIGHT_ASSOC, and we won't bother with looking ahead, etc.
+    Two consequent expr's is an error. Later, check for this should be moved to getOperAndExpr, were info about line positions is available, and more informative error message can be generated."
+    operStack = []
+    exprStack = []
+    lastElemType = _NONE
+    do (ind=0) (ind>=len(operAndExpr)) {
+        opex = operAndExpr[ind]
+        curr = opex[0]
+        case (lastElemType)
+        is (_EXPR) {
+            case (curr)
+            is (_EXPR, _UN_OP, _SHORTCUT) {
+                signalSyntaxError("It is illegal to have two consequent expressions in an operator form") }
+            is (_BIN_OP, _UN_BIN_OP) {
+                _reduceBinaryOper(operStack,exprStack,opex[1])
+                operStack.append(~[_BIN_OP,opex[1]])
+                lastElemType = _OP }
+            is (_COMMENT) {
+                error("Programming error: getOperAndExpr should separate operator expressions and comments") }
+            else {
+                error("Programming error: type of element in operAndExpr has invalid value '~A'" % curr) }}
+        is (_OP) {
+            case (curr)
+            is (_BIN_OP) {
+                signalSyntaxError("Unexpected operator '~A' on line ~D, position ~D" % ~[opex[1].type,opex[1].lineNum,opex[1].start]) }
+            is (_UN_OP, _UN_BIN_OP) {
+                operStack.append(~[_UN_OP,opex[1]]) }
+            is (_SHORTCUT) {
+                operStack.append(opex)
+                lastElemType = _SHORTCUT }
+            is (_EXPR) {
+                _reduceUnaryOper(operStack,exprStack,opex[1])
+                lastElemType = _EXPR }
+            is (_COMMENT) {
+                signalSyntaxError("Comment prematurely ends operator form on line ~D, after position ~D" % ~[operStack[-1][1].lineNum,operStack[-1][1].end]) }
+            else {
+                error("Programming error: type of element in operAndExpr has invalid value '~A'" % curr) }}
+        is (_NONE) {
+            case (curr)
+            is (_BIN_OP) {
+                signalSyntaxError("Operator '~A' on line ~D, position ~D, is not preceded by any expression" % ~[opex[1].type,opex[1].lineNum,opex[1].start]) }
+            is (_UN_OP, _UN_BIN_OP) {
+                operStack.append(~[_UN_OP,opex[1]])
+                lastElemType = _OP }
+            is (_SHORTCUT) {
+                operStack.append(opex)
+                lastElemType = _SHORTCUT }
+            is (_EXPR) {
+                exprStack.append(opex[1])
+                lastElemType = _EXPR }
+            is (_COMMENT) {
+                return opex[1] }
+            else {
+                signalSyntaxError("Programming error: type of element in operAndExpr has invalid value '~A'" % curr) }}
+        is (_SHORTCUT) {
+            case (curr)
+            is (_SHORTCUT) {
+                operStack.append(opex) }
+            is (_COMMENT) {
+                signalSyntaxError("Comment prematurely ends operator form on line ~D, after position ~D" % ~[operStack[-1][1].lineNum,operStack[-1][1].end]) }
+            else {
+                _reduceShorcut(operStack,exprStack,opex)
+                lastElemType = _EXPR }}
+        else {
+            error("Programming error: lastElemType has invalid value '~A'" % curr) }
+        ind += 1 }
+    if ((lastElemType==_OP) or (lastElemType==_SHORTCUT)) {
+        signalSyntaxError("Premature end of operator expression") }
+    _getFinalForm(operStack,exprStack,level) }
+
+
+def getOneForm(startInd,elems,level,addLineNums) {
+    ; returns only one first form or atom
+    operAndExpr @ end = getOperAndExpr(startInd,elems,level,addLineNums)
+    form = getOperForm(operAndExpr,level)
+    form @ end }
+
+
+def getForms(elems,level,addLineNums=nil) {
+    formsAndVars = []
+    do (ind=0) (ind>=len(elems)) {
+        elemFound @ ind = skipElems([WHITE_ELEM,","],ind,elems,nil)
+        if (not elemFound) { break }
+        if (addLineNums) {
+            formsAndVars.append(~[[],~[COMMENT_TYPE,"; source line # ~D" % elems[ind].lineNum]]) }
+        form @ ind = getOneForm(ind,elems,level,addLineNums)
+        if (form) {
+            formsAndVars.append(~[level.newVars,form])
+            level.newVars = [] }}
+    forms = []
+    if (level.isTopLevel) {
+        for (varAndForm,formsAndVars) {
+            forms.append(varAndForm[1]) }}
+    else {
+        innerForms = forms
+        for (varAndForm,formsAndVars) {
+            if (len(varAndForm[0])!=0) {
+                form = ~[FORM_TYPE,[~[ATOM_TYPE,LISP_LET],~[FORM_TYPE,[]]]]
+                for (symbName,varAndForm[0]) {
+                    form[1][1][1].append(~[ATOM_TYPE,symbName]) }
+                innerForms.append(form)
+                innerForms = form[1] }
+            innerForms.append(varAndForm[1]) }}
+    forms }
+

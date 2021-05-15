@@ -1,0 +1,660 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use unittest {testcase, tName, tFuns, assertEqual, assertTrue, assertCondition
+              runOneTest }
+
+
+inside "TWINLISP"
+
+class TestTranslStringReading (testcase) {
+    tName {:initform="TestTranslStringReading.twl"}
+    tFuns {:initform='~(&test-markElemsInStr-1
+                        &test-markElemsInStr-2
+                        &test-markElemsInStr-3
+                        &test-markElemsInStr-4
+                        &test-markElemsInStr-5
+                        &test-markElemsInStr-6
+                        &test-markElemsInStr-7
+                        &test-markElemsInStr-10
+                        &test-markElemsInStr-11
+                        &test-markElemsInStr-12
+                        &test-markElemsInStr-13
+                        &test-markElemsInStr-14
+                        &test-markElemsInStr-15
+                        &test-markElemsInStr-16
+                        &test-markElemsInStr-17
+                        &test-markElemsInStr-18
+                        &test-markElemsInStr-19
+                        &test-markElemsInStr-20
+                        &test-markElemsInStr-21
+                        &test-markElemsInStr-22
+                        &test-markElemsInStr-23
+                        &test-markElemsInStr-24
+                        &test-markElemsInStr-25
+                        &test-markElemsInStr-26
+                        &test-markElemsInStr-27
+                        &test-markElemsInStr-28
+                        &test-markElemsInStr-29
+                        &test-markElemsInStr-30
+                        testGrowingVect)}
+    }
+
+meth &test-markElemsInStr-1(ts==TestTranslStringReading) {
+    ; note unix end line character
+    st = "  &lisp-symbol = foo(x,y)*.45  ; this is comment"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,WHITE_ELEM)
+    ts.assertEqual(strElem.value,nil)
+    strElem = res[1]
+    ts.assertEqual(strElem.lineNum,0)
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"lisp-symbol")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,WHITE_ELEM)
+    strElem = res[3]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,WHITE_ELEM)
+    strElem = res[5]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"foo")
+    strElem = res[6]
+    ts.assertEqual(strElem.type,"(")
+    ts.assertEqual(strElem.value,"(")
+    strElem = res[7]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[8]
+    ts.assertEqual(strElem.type,",")
+    ts.assertEqual(strElem.value,",")
+    strElem = res[9]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"y")
+    strElem = res[10]
+    ts.assertEqual(strElem.type,")")
+    ts.assertEqual(strElem.value,")")
+    strElem = res[11]
+    ts.assertEqual(strElem.type,"*")
+    ts.assertEqual(strElem.value,"*")
+    strElem = res[12]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,".45")
+    strElem = res[13]
+    ts.assertEqual(strElem.type,WHITE_ELEM)
+    ts.assertEqual(strElem.value,nil)
+    strElem = res[14]
+    ts.assertEqual(strElem.type,COMM_ELEM)
+    ts.assertEqual(strElem.value,"; this is comment")
+    strElem = res[15]
+    ts.assertEqual(strElem.type,LINE_END_ELEM)
+    ts.assertEqual(strElem.value,nil)
+    }
+
+meth &test-markElemsInStr-2(ts==TestTranslStringReading) {
+    st = "  &+symbol = foo+\"Some string\"  ; this is comment"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,WHITE_ELEM)
+    ts.assertEqual(strElem.value,nil)
+    strElem = res[1]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"+symbol")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,WHITE_ELEM)
+    strElem = res[3]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,WHITE_ELEM)
+    strElem = res[5]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"foo")
+    strElem = res[6]
+    ts.assertEqual(strElem.type,"+")
+    ts.assertEqual(strElem.value,"+")
+    strElem = res[7]
+    ts.assertEqual(strElem.type,STR_START_ELEM)
+    ts.assertEqual(strElem.value,"\"")
+    strElem = res[8]
+    ts.assertEqual(strElem.type,STR_END_ELEM)
+    ts.assertEqual(strElem.value,"Some string\"")
+    strElem = res[9]
+    ts.assertEqual(strElem.type,WHITE_ELEM)
+    strElem = res[10]
+    ts.assertEqual(strElem.type,COMM_ELEM)
+    ts.assertEqual(strElem.value,"; this is comment")
+    strElem = res[11]
+    ts.assertEqual(strElem.type,LINE_END_ELEM)
+    ts.assertEqual(strElem.value,nil)
+    }
+
+meth &test-markElemsInStr-3(ts==TestTranslStringReading) {
+    st = "foo==\"String spreads to several lines, has \\\"-quotes"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,STRING_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"foo")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"==")
+    ts.assertEqual(strElem.value,"==")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,STR_START_ELEM)
+    ts.assertEqual(strElem.value,"\"")
+    strElem = res[3]
+    ts.assertEqual(strElem.type,STR_MID_ELEM)
+    ts.assertEqual(strElem.value
+             "String spreads to several lines, has \\\"-quotes"+#\Newline)
+    }
+
+meth &test-markElemsInStr-4(ts==TestTranslStringReading) {
+    ; line of a multiline string
+    st = "string started before, and does not end here"
+    res @ phase = markElemsInStr(st,0,STRING_PHASE)
+    ts.assertEqual(phase,STRING_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,STR_MID_ELEM)
+    ts.assertEqual(strElem.value
+             "string started before, and does not end here"+#\Newline)
+    st = ""
+    res @ phase = markElemsInStr(st,0,STRING_PHASE)
+    ts.assertEqual(phase,STRING_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,STR_MID_ELEM)
+    ts.assertEqual(strElem.value,""+#\Newline)
+    }
+
+meth &test-markElemsInStr-5(ts==TestTranslStringReading) {
+    ; line of a multiline string
+    st = "string started before, and ends here\"  ; some comment"
+    res @ phase = markElemsInStr(st,0,STRING_PHASE)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,STR_END_ELEM)
+    ts.assertEqual(strElem.value,
+             "string started before, and ends here\"")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,WHITE_ELEM)
+    strElem = res[2]
+    ts.assertEqual(strElem.type,COMM_ELEM)
+    ts.assertEqual(strElem.value,"; some comment")
+    }
+
+meth &test-markElemsInStr-6(ts==TestTranslStringReading) {
+    st = "x[0]=&+$%^\\(-symbol(23.4)"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"[")
+    ts.assertEqual(strElem.value,"[")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,"0")
+    strElem = res[3]
+    ts.assertEqual(strElem.type,"]")
+    ts.assertEqual(strElem.value,"]")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[5]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"+$%^\\(-symbol")
+    strElem = res[6]
+    ts.assertEqual(strElem.type,"(")
+    ts.assertEqual(strElem.value,"(")
+    strElem = res[7]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,"23.4")
+    strElem = res[8]
+    ts.assertEqual(strElem.type,")")
+    ts.assertEqual(strElem.value,")")
+    }
+
+meth &test-markElemsInStr-7(ts==TestTranslStringReading) {
+    st = "x=&&symbol[23.4]\\(()"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"&symbol[23.4]\\(")
+    strElem = res[3]
+    ts.assertEqual(strElem.type,"(")
+    ts.assertEqual(strElem.value,"(")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,")")
+    ts.assertEqual(strElem.value,")")
+    }
+
+meth &test-markElemsInStr-10(ts==TestTranslStringReading) {
+    st = "x=\"\""
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,STR_START_ELEM)
+    ts.assertEqual(strElem.value,"\"")
+    strElem = res[3]
+    ts.assertEqual(strElem.type,STR_END_ELEM)
+    ts.assertEqual(strElem.value,"\"")
+    }
+
+meth &test-markElemsInStr-11(ts==TestTranslStringReading) {
+    st = "x=#b01010"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,SYNT_STRUCT_ELEM)
+    ts.assertEqual(strElem.value,"#b01010")
+    }
+
+meth &test-markElemsInStr-12(ts==TestTranslStringReading) {
+    st = "x=(#\L,4)"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,"(")
+    ts.assertEqual(strElem.value,"(")
+    strElem = res[3]
+    ts.assertEqual(strElem.type,SYNT_STRUCT_ELEM)
+    ts.assertEqual(strElem.value,"#\L")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,",")
+    ts.assertEqual(strElem.value,",")
+    strElem = res[5]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,"4")
+    strElem = res[6]
+    ts.assertEqual(strElem.type,")")
+    ts.assertEqual(strElem.value,")")
+    }
+
+meth &test-markElemsInStr-13(ts==TestTranslStringReading) {
+    st = "x=#'foo"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,"#'")
+    ts.assertEqual(strElem.value,"#'")
+    strElem = res[3]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"foo")
+    }
+
+meth &test-markElemsInStr-14(ts==TestTranslStringReading) {
+    st = "x!=#c(1.,2e-3)"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"!=")
+    ts.assertEqual(strElem.value,"!=")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,"#c")
+    ts.assertEqual(strElem.value,"#c")
+    strElem = res[3]
+    ts.assertEqual(strElem.type,"(")
+    ts.assertEqual(strElem.value,"(")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,"1.")
+    strElem = res[5]
+    ts.assertEqual(strElem.type,",")
+    ts.assertEqual(strElem.value,",")
+    strElem = res[6]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,"2e-3")
+    strElem = res[7]
+    ts.assertEqual(strElem.type,")")
+    ts.assertEqual(strElem.value,")")
+    }
+
+meth &test-markElemsInStr-15(ts==TestTranslStringReading) {
+    st = " x = # C(1,2)"
+    ts.assertCondition(&tl-syntax-error,markElemsInStr(st,0))
+    st = "x=#"
+    ts.assertCondition(&tl-syntax-error,markElemsInStr(st,0))
+    st = "x=#(fg)"
+    ts.assertCondition(&tl-syntax-error,markElemsInStr(st,0))
+    st = "x=#,fg"
+    ts.assertCondition(&tl-syntax-error,markElemsInStr(st,0))
+    }
+
+meth &test-markElemsInStr-16(ts==TestTranslStringReading) {
+    st = "x=#\\L()"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,SYNT_STRUCT_ELEM)
+    ts.assertEqual(strElem.value,"#\\L")
+    strElem = res[3]
+    ts.assertEqual(strElem.type,"(")
+    ts.assertEqual(strElem.value,"(")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,")")
+    ts.assertEqual(strElem.value,")")
+    }
+
+meth &test-markElemsInStr-17(ts==TestTranslStringReading) {
+    st = "x=3/4+3./4-.5f+7"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,"3")
+    strElem = res[3]
+    ts.assertEqual(strElem.type,"/")
+    ts.assertEqual(strElem.value,"/")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,"4")
+    strElem = res[5]
+    ts.assertEqual(strElem.type,"+")
+    ts.assertEqual(strElem.value,"+")
+    strElem = res[6]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,"3.")
+    strElem = res[7]
+    ts.assertEqual(strElem.type,"/")
+    ts.assertEqual(strElem.value,"/")
+    strElem = res[8]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,"4")
+    strElem = res[9]
+    ts.assertEqual(strElem.type,"-")
+    ts.assertEqual(strElem.value,"-")
+    strElem = res[10]
+    ts.assertEqual(strElem.type,NUM_ELEM)
+    ts.assertEqual(strElem.value,".5f+7")
+    }
+
+meth &test-markElemsInStr-18(ts==TestTranslStringReading) {
+    st = "x=&lisp-pack:&lisp-symb"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"x")
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"=")
+    ts.assertEqual(strElem.value,"=")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"lisp-pack")
+    strElem = res[3]
+    ts.assertEqual(strElem.type,":")
+    ts.assertEqual(strElem.value,":")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"lisp-symb")
+    }
+
+meth &test-markElemsInStr-19(ts==TestTranslStringReading) {
+    st = "if a & b-c {"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[2]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"a")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,"&")
+    ts.assertEqual(strElem.value,"&")
+    strElem = res[5]
+    ts.assertEqual(strElem.type,WHITE_ELEM)
+    strElem = res[6]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"b")
+    strElem = res[7]
+    ts.assertEqual(strElem.type,"-")
+    ts.assertEqual(strElem.value,"-")
+    strElem = res[8]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"c")
+    }
+
+meth &test-markElemsInStr-20(ts==TestTranslStringReading) {
+    st = "if a &b-c {"
+    res @ phase = markElemsInStr(st,0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[2]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"a")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"b-c")
+    }
+
+meth &test-markElemsInStr-21(ts==TestTranslStringReading) {
+    res @ phase = markElemsInStr("",0)
+    ts.assertEqual(phase,REG_PHASE)
+    ts.assertEqual(len(res),1)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,LINE_END_ELEM)
+    ts.assertEqual(strElem.value,nil)
+    }
+
+meth &test-markElemsInStr-22(ts==TestTranslStringReading) {
+    res @ phase = markElemsInStr("def foo(&def ){}",0)
+    ts.assertEqual(phase,REG_PHASE)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,SPEC_SYMB_ELEM)
+    ts.assertEqual(strElem.value,"def")
+    strElem = res[4]
+    ts.assertEqual(strElem.type,SYMB_ELEM)
+    ts.assertEqual(strElem.value,"def")
+    }
+
+meth &test-markElemsInStr-23(ts==TestTranslStringReading) {
+    res @ phase @ numOfClispLevel = markElemsInStr("#t{(+ 1 2)#t} - 3",0)
+    ts.assertEqual(phase,REG_PHASE)
+    ts.assertEqual(numOfClispLevel,0)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,CLISP_START_ELEM)
+    ts.assertEqual(strElem.value,nil)
+    strElem = res[1]
+    ts.assertEqual(strElem.type,CLISP_END_ELEM)
+    ts.assertEqual(strElem.value,"(+ 1 2)"+#\Newline)
+    strElem = res[3]
+    ts.assertEqual(strElem.type,"-")
+    ts.assertEqual(strElem.value,"-")
+    }
+
+meth &test-markElemsInStr-24(ts==TestTranslStringReading) {
+    res @ phase @ numOfClispLevel = markElemsInStr("#t{(+ 1 2) ;comment in lisp code#t}-3",0)
+    ts.assertEqual(phase,REG_PHASE)
+    ts.assertEqual(numOfClispLevel,0)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,CLISP_START_ELEM)
+    ts.assertEqual(strElem.value,nil)
+    strElem = res[1]
+    ts.assertEqual(strElem.type,CLISP_END_ELEM)
+    ts.assertEqual(strElem.value,"(+ 1 2) ;comment in lisp code"+#\Newline)
+    }
+
+meth &test-markElemsInStr-25(ts==TestTranslStringReading) {
+    res @ phase @ numOfClispLevel = markElemsInStr("#t{(+ 1 2)",0)
+    ts.assertEqual(phase,CLISP_PHASE)
+    ts.assertEqual(numOfClispLevel,1)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,CLISP_START_ELEM)
+    ts.assertEqual(strElem.value,nil)
+    ts.assertEqual(strElem.start,0)
+    ts.assertEqual(strElem.end,nil)
+    ts.assertEqual(strElem.lineNum,0)
+    strElem = res[1]
+    ts.assertEqual(strElem.type,CLISP_MID_ELEM)
+    ts.assertEqual(strElem.value,"(+ 1 2)"+#\Newline)
+    }
+
+meth &test-markElemsInStr-26(ts==TestTranslStringReading) {
+    res @ phase @ numOfClispLevel = markElemsInStr("(+ 1 2)  ;;comment",0,CLISP_PHASE,3)
+    ts.assertEqual(phase,CLISP_PHASE)
+    ts.assertEqual(numOfClispLevel,3)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,CLISP_MID_ELEM)
+    ts.assertEqual(strElem.value,"(+ 1 2)  ;;comment"+#\Newline)
+    }
+
+meth &test-markElemsInStr-27(ts==TestTranslStringReading) {
+    res @ phase @ numOfClispLevel = markElemsInStr("(+ 1 2)  ;;comment#t}",0,CLISP_PHASE,1)
+    ts.assertEqual(phase,REG_PHASE)
+    ts.assertEqual(numOfClispLevel,0)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,CLISP_END_ELEM)
+    ts.assertEqual(strElem.value,"(+ 1 2)  ;;comment"+#\Newline)
+    }
+
+meth &test-markElemsInStr-28(ts==TestTranslStringReading) {
+    res @ phase @ numOfClispLevel = markElemsInStr("(+ 1 2)  ;;comment#t}",0,CLISP_PHASE,3)
+    ts.assertEqual(phase,CLISP_PHASE)
+    ts.assertEqual(numOfClispLevel,2)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,CLISP_MID_ELEM)
+    ts.assertEqual(strElem.value,"(+ 1 2)  ;;comment#t}")
+    }
+
+meth &test-markElemsInStr-29(ts==TestTranslStringReading) {
+    res @ phase @ numOfClispLevel = markElemsInStr("#t{(+ 1 2)",0,CLISP_PHASE,1)
+    ts.assertEqual(phase,CLISP_PHASE)
+    ts.assertEqual(numOfClispLevel,2)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,CLISP_MID_ELEM)
+    ts.assertEqual(strElem.value,"#t{")
+    ts.assertEqual(strElem.start,0)
+    ts.assertEqual(strElem.end,3)
+    ts.assertEqual(strElem.lineNum,0)
+    strElem = res[1]
+    ts.assertEqual(strElem.type,CLISP_MID_ELEM)
+    ts.assertEqual(strElem.value,"(+ 1 2)"+#\Newline)
+    }
+
+meth &test-markElemsInStr-30(ts==TestTranslStringReading) {
+    res @ phase @ numOfClispLevel = markElemsInStr("))#t}+#t{(+ 1 2)",0,CLISP_PHASE,1)
+    ts.assertEqual(phase,CLISP_PHASE)
+    ts.assertEqual(numOfClispLevel,1)
+    strElem = res[0]
+    ts.assertEqual(strElem.type,CLISP_END_ELEM)
+    ts.assertEqual(strElem.value,"))"+#\Newline)
+    strElem = res[1]
+    ts.assertEqual(strElem.type,"+")
+    strElem = res[2]
+    ts.assertEqual(strElem.type,CLISP_START_ELEM)
+    strElem = res[3]
+    ts.assertEqual(strElem.type,CLISP_MID_ELEM)
+    ts.assertEqual(strElem.value,"(+ 1 2)"+#\Newline)
+    }
+
+
+
+
+
+meth testGrowingVect(ts==TestTranslStringReading) {
+    st = "def foo(x,y) { ; definition of function" + #\Newline + \
+         "    \"foo adds x and y\"" + #\Newline + \
+         "    x+y}"
+    gv = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertEqual(len(gv),13)
+    ts.assertEqual(gv[0].value,"def")
+    ts.assertEqual(gv[1].type,WHITE_ELEM)
+    ts.assertEqual(gv[2].value,"foo")
+    ts.assertEqual(gv[3].value,"(")
+    ts.assertEqual(gv[4].value,"x")
+    ts.assertEqual(gv[5].value,",")
+    ts.assertEqual(gv[6].value,"y")
+    ts.assertEqual(gv[7].value,")")
+    ts.assertEqual(gv[8].type,WHITE_ELEM)
+    ts.assertEqual(gv[9].value,"{")
+    ts.assertEqual(gv[10].type,WHITE_ELEM)
+    ts.assertEqual(gv[11].value,"; definition of function")
+    ts.assertEqual(gv[12].type,LINE_END_ELEM)
+    gv.growOnIndex(13)
+    ts.assertEqual(len(gv),17)
+    ts.assertEqual(gv[13].type,WHITE_ELEM)
+    ts.assertEqual(gv[14].value,"\"")
+    ts.assertEqual(gv[15].value,"foo adds x and y\"")
+    ts.assertEqual(gv[16].type,LINE_END_ELEM)
+    gv.growOnIndex(17)
+    ts.assertEqual(len(gv),23)
+    ts.assertEqual(gv[17].type,WHITE_ELEM)
+    ts.assertEqual(gv[18].value,"x")
+    ts.assertEqual(gv[19].value,"+")
+    ts.assertEqual(gv[20].value,"y")
+    ts.assertEqual(gv[21].value,"}")
+    ts.assertEqual(gv[22].type,LINE_END_ELEM)
+    gv.growOnIndex(23)
+    ts.assertEqual(len(gv),23)
+    ts.assertCondition(error,gv[23])
+    ts.assertEqual(len(gv[10->20]),10)
+    ts.assertTrue(gv[10->20].typep('vector))
+    ts.assertEqual(gv[10->20][0],gv[10])
+    ts.assertEqual(gv[10->20][5],gv[15])
+    ts.assertEqual(gv[10->20][9],gv[19])
+    }
+
+

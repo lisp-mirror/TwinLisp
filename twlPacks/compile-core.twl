@@ -1,0 +1,47 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+&logical-pathname-translations("tl-sys") = \
+    ~[  ~["**;*.*", concatenate('string,namestring(ext:cd()),"**/") ]
+        ~[";**;*.*", concatenate('string,namestring(ext:cd()),"**/") ]]
+_load(&logical-pathname("tl-sys:core;tl-def"))
+
+var( comPathList = \
+          ~["tl-sys:core;other-macs"
+            "tl-sys:core;container-types-and-macs"
+            "tl-sys:core;oper-macs"
+            "tl-sys:core;other-funcs"
+            "tl-sys:core;oper-meths"
+            "tl-sys:core;other-meths"
+            "tl-sys:core;container-meths"
+            ; TL's translator
+            "tl-sys:core;transl-const"
+            "tl-sys:core;transl-string-reading"
+            "tl-sys:core;transl-elem-search-funcs"
+            "tl-sys:core;transl-form-building"
+            "tl-sys:core;transl-form-writting"
+            ; TL's loading func
+            "tl-sys:core;loader-funcs"
+            ; reader macro for Clisp to read TL code
+            "tl-sys:core;reader-tl-macro"
+            ; TL's pack definition
+            "tl-sys:core;tl-def"] )
+for (logPathStr,comPathList) {
+    &compile-file(namestring(&translate-logical-pathname(&logical-pathname(logPathStr)))) }
+

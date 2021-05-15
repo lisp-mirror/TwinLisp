@@ -1,0 +1,387 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use unittest {testcase, tName, tFuns, assertEqual, assertTrue, assertCondition
+              runOneTest }
+
+
+inside "TWINLISP"
+
+class TestTranslFormBuildingFour (testcase) {
+    tName {:initform="TestTranslFormBuildingFour.twl"}
+    tFuns {:initform='~(&test-getForms-meth-specializers
+                        &test-getForms-meth-specifiers
+                        &test-getForms-defgen-1
+                        &test-getForms-defgen-2
+                        &test-getForms-defgen-3
+                        &test-getForms-defgen-4
+                        &test-getForms-gfun-1
+                        &test-getForms-gfun-2
+                        &test-getForms-glet-1
+                        &test-getForms-glet-2
+                        &test-getForms-glet-3
+                        &test-getForms-glabels-1
+                        &test-getForms-glabels-2
+                        &test-getForms-glabels-3
+                        &test-getForms-handle-1
+                        &test-getForms-handle-2
+                        )}
+    }
+
+meth  &test-getForms-meth-specializers(ts==TestTranslFormBuildingFour) {
+    st = "meth foo (a==integer,b,c==character,d=0) {}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defmethod"],~[ATOM_TYPE,"foo"]
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"integer"]]]
+                                   ~[ATOM_TYPE,"b"]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"c"],~[ATOM_TYPE,"character"]]]
+                                   ~[ATOM_TYPE,"&optional"]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"d"],~[ATOM_TYPE,"0"]]]]]]]])
+    }
+
+meth  &test-getForms-meth-specifiers(ts==TestTranslFormBuildingFour) {
+    st = "meth foo progn, :&other-qualifier (a==integer) {}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defmethod"],~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"cl:progn"]
+                      ~[ATOM_TYPE,":other-qualifier"]
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"integer"]]]]]]]])
+    }
+
+meth &test-getForms-defgen-1 (ts==TestTranslFormBuildingFour) {
+    st = "defgen foo (a,&&optional b)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defgeneric"],~[ATOM_TYPE,"foo"]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"],~[ATOM_TYPE,"b"]]]]]])
+    }
+
+meth &test-getForms-defgen-2 (ts==TestTranslFormBuildingFour) {
+    st = "defgen foo (a,&&optional b)
+            options {
+                :documentation=\"foo doc-string\"}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defgeneric"],~[ATOM_TYPE,"foo"]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"],~[ATOM_TYPE,"b"]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":documentation"],~[ATOM_TYPE,"\"foo doc-string\""]]]]]])
+    }
+
+meth &test-getForms-defgen-3 (ts==TestTranslFormBuildingFour) {
+    st = "defgen foo (a,&&optional b)
+            options {
+                :documentation=\"foo doc-string\"}
+            meth (a==character,b=#\A) {
+                return a }
+            meth (a==integer,b=0) {
+                return a }
+            meth :before (a==t,b=nil) {
+                print(a) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defgeneric"],~[ATOM_TYPE,"foo"]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"],~[ATOM_TYPE,"b"]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":documentation"],~[ATOM_TYPE,"\"foo doc-string\""]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"character"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"#\A"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:return-from"],~[ATOM_TYPE,"foo"]
+                                                ~[ATOM_TYPE,"a"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"integer"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"0"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:return-from"],~[ATOM_TYPE,"foo"]
+                                                ~[ATOM_TYPE,"a"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"],~[ATOM_TYPE,":before"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"cl:t"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"cl:nil"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"print"],~[ATOM_TYPE,"a"]]]]]]]])
+    }
+
+meth &test-getForms-defgen-4 (ts==TestTranslFormBuildingFour) {
+    st = "defgen foo (a,&&optional b)
+            meth (a==character,b=#\A) {
+                return a }
+            meth (a==integer,b=0) {
+                return a }
+            meth :before (a==t,b=nil) {
+                print(a) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defgeneric"],~[ATOM_TYPE,"foo"]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"],~[ATOM_TYPE,"b"]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"character"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"#\A"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:return-from"],~[ATOM_TYPE,"foo"]
+                                                ~[ATOM_TYPE,"a"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"integer"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"0"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:return-from"],~[ATOM_TYPE,"foo"]
+                                                ~[ATOM_TYPE,"a"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"],~[ATOM_TYPE,":before"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"cl:t"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"cl:nil"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"print"],~[ATOM_TYPE,"a"]]]]]]]])
+    }
+
+meth &test-getForms-gfun-1 (ts==TestTranslFormBuildingFour) {
+    st = "gfun (a,&&optional b)
+            options {
+                :documentation=\"foo doc-string\"}
+            meth (a==character,b=#\A) {
+                a+b }
+            meth (a==integer,b=0) {
+                a+b }
+            meth :before (a==t,b=nil) {
+                print(a) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:generic-function"]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"],~[ATOM_TYPE,"b"]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":documentation"],~[ATOM_TYPE,"\"foo doc-string\""]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"character"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"#\A"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"a"]
+                                                ~[ATOM_TYPE,"b"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"integer"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"0"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"a"]
+                                                ~[ATOM_TYPE,"b"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"],~[ATOM_TYPE,":before"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"cl:t"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"cl:nil"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"print"],~[ATOM_TYPE,"a"]]]]]]]])
+    }
+
+meth &test-getForms-gfun-2 (ts==TestTranslFormBuildingFour) {
+    st = "gfun (a,&&optional b)
+            meth (a==character,b=#\A) {
+                a+b }
+            meth (a==integer,b=0) {
+                a+b }
+            meth :before (a==t,b=nil) {
+                print(a) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:generic-function"]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"],~[ATOM_TYPE,"b"]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"character"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"#\A"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"a"]
+                                                ~[ATOM_TYPE,"b"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"integer"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"0"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"a"]
+                                                ~[ATOM_TYPE,"b"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":method"],~[ATOM_TYPE,":before"]
+                                   ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"cl:t"]]]
+                                                ~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"cl:nil"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"print"],~[ATOM_TYPE,"a"]]]]]]]])
+    }
+
+meth &test-getForms-glet-1 (ts==TestTranslFormBuildingFour) {
+    ;; Attention, in CLisp generic-flet is available only from clos
+    st = "glet foo (a,&&optional b)
+               bar (a) {
+              foo(bar(1)) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"clos:generic-flet"]
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"foo"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"]
+                                                             ~[ATOM_TYPE,"b"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"bar"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"]]]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[FORM_TYPE,[~[ATOM_TYPE,"bar"],~[ATOM_TYPE,"1"]]]]]]]])
+    }
+
+meth &test-getForms-glet-2 (ts==TestTranslFormBuildingFour) {
+    ;; Attention, in CLisp generic-flet is available only from clos
+    st = "glet foo (a,&&optional b)
+               bar (a)
+               options {
+                :documentation=\"bar doc-string\"} {
+              foo(bar(1)) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"clos:generic-flet"]
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"foo"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"]
+                                                             ~[ATOM_TYPE,"b"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"bar"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"]]]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,":documentation"]
+                                                             ~[ATOM_TYPE,"\"bar doc-string\""]]]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[FORM_TYPE,[~[ATOM_TYPE,"bar"],~[ATOM_TYPE,"1"]]]]]]]])
+    }
+
+meth &test-getForms-glet-3 (ts==TestTranslFormBuildingFour) {
+    ;; Attention, in CLisp generic-flet is available only from clos
+    st = "glet foo (a,&&optional b)
+                   meth (a==character,b=#\A) {
+                       a+b }
+               bar (a)
+               options {
+                :documentation=\"bar doc-string\"} {
+              foo(bar(1)) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"clos:generic-flet"]
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"foo"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"]
+                                                             ~[ATOM_TYPE,"b"]]]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,":method"]
+                                                    ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"]
+                                                                              ~[ATOM_TYPE,"character"]]]
+                                                                 ~[ATOM_TYPE,"&optional"]
+                                                                 ~[FORM_TYPE,[~[ATOM_TYPE,"b"]
+                                                                              ~[ATOM_TYPE,"#\A"]]]]]
+                                                    ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"a"]
+                                                                 ~[ATOM_TYPE,"b"]]]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"bar"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"]]]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,":documentation"]
+                                                             ~[ATOM_TYPE,"\"bar doc-string\""]]]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[FORM_TYPE,[~[ATOM_TYPE,"bar"],~[ATOM_TYPE,"1"]]]]]]]])
+    }
+
+meth &test-getForms-glabels-1 (ts==TestTranslFormBuildingFour) {
+    ;; Attention, in CLisp generic-labels is available only from clos
+    st = "glabels
+               foo (a,&&optional b)
+               bar (a) {
+              foo(bar(1)) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"clos:generic-labels"]
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"foo"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"]
+                                                             ~[ATOM_TYPE,"b"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"bar"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"]]]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[FORM_TYPE,[~[ATOM_TYPE,"bar"],~[ATOM_TYPE,"1"]]]]]]]])
+    }
+
+meth &test-getForms-glabels-2 (ts==TestTranslFormBuildingFour) {
+    ;; Attention, in CLisp generic-labels is available only from clos
+    st = "glabels
+               foo (a,&&optional b)
+               bar (a)
+               options {
+                :documentation=\"bar doc-string\"} {
+              foo(bar(1)) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"clos:generic-labels"]
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"foo"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"]
+                                                             ~[ATOM_TYPE,"b"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"bar"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"]]]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,":documentation"]
+                                                             ~[ATOM_TYPE,"\"bar doc-string\""]]]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[FORM_TYPE,[~[ATOM_TYPE,"bar"],~[ATOM_TYPE,"1"]]]]]]]])
+    }
+
+meth &test-getForms-glabels-3 (ts==TestTranslFormBuildingFour) {
+    ;; Attention, in CLisp generic-labels is available only from clos
+    st = "glabels
+               foo (a,&&optional b)
+                   meth (a==character,b=#\A) {
+                       a+b }
+               bar (a)
+               options {
+                :documentation=\"bar doc-string\"} {
+              foo(bar(1)) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"clos:generic-labels"]
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"foo"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"]
+                                                             ~[ATOM_TYPE,"b"]]]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,":method"]
+                                                    ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"]
+                                                                              ~[ATOM_TYPE,"character"]]]
+                                                                 ~[ATOM_TYPE,"&optional"]
+                                                                 ~[FORM_TYPE,[~[ATOM_TYPE,"b"]
+                                                                              ~[ATOM_TYPE,"#\A"]]]]]
+                                                    ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"a"]
+                                                                 ~[ATOM_TYPE,"b"]]]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"bar"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"a"]]]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,":documentation"]
+                                                             ~[ATOM_TYPE,"\"bar doc-string\""]]]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[FORM_TYPE,[~[ATOM_TYPE,"bar"],~[ATOM_TYPE,"1"]]]]]]]])
+    }
+
+meth &test-getForms-handle-1 (ts==TestTranslFormBuildingFour) {
+    st = "handle { foo(), boo() }
+          cond error1 { &act-on-error1() }
+          cond error2 (er) { &act-on-error1(er) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:handler-case"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"boo"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"error1"],~[FORM_TYPE,[]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"act-on-error1"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"error2"],~[FORM_TYPE,[~[ATOM_TYPE,"er"]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"act-on-error1"],~[ATOM_TYPE,"er"]]]]]]]])
+    }
+
+meth &test-getForms-handle-2 (ts==TestTranslFormBuildingFour) {
+    st = "handle { foo(), boo() }
+          cond error1 { &act-on-error1() }
+          cond error2 (er) { &act-on-error1(er) }
+          else (a,b=nil) { bar(a,b) }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:handler-case"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"boo"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"error1"],~[FORM_TYPE,[]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"act-on-error1"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"error2"],~[FORM_TYPE,[~[ATOM_TYPE,"er"]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"act-on-error1"],~[ATOM_TYPE,"er"]]]]]
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":no-error"]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"]
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"cl:nil"]]]]]
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"bar"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"b"]]]]]]]])
+    }
+
+

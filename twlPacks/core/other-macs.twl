@@ -1,0 +1,70 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+inside "TWINLISP"
+
+;; Macro new
+
+mac new (c,*rest) {
+    `if (subtypep('$c,'condition)) {
+         &make-condition('$c,$@rest)}
+     else {
+         &make-instance('$c,$@rest)}}
+
+;; TwinLisp's case
+
+mac &tl-case (x,elseForm,*isForms) {
+    let (xval=gensym()) {
+        `let ($xval=$x) {
+            &cond($@mapcar(#'lambda (isForm) {
+                                `~(&or($@mapcar(#'lambda (keyVal) {
+                                                      `($xval==$keyVal) }
+                                                isForm.car()))
+                                   $@isForm.cdr())}
+                            isForms)
+                  $@if (elseForm) { `~(~(t,$@elseForm)) } ) }}}
+
+;; TwinLisp's for loop
+
+mac &tl-for (.(var,cont,*restVars),resFormsList,**body) {
+    let (it=gensym(), nextPair=gensym()) {
+        `dos ($it=($cont).iter()
+              $nextPair=($it).next().&multiple-value-list() \
+                       ->($it).next().&multiple-value-list()
+              $var=($nextPair).first()->($nextPair).first()
+              $@restVars)
+             (not ($nextPair).second()
+              $@resFormsList) {
+            $@body}}}
+
+;; TwinLisp times loop
+
+mac &tl-times (.(var,maxVal,*restVars),resFormsList,**body) {
+    `dos ($var=0->$var+1
+          $@restVars)
+         ($var>=$maxVal
+          $@resFormsList) {
+        $@body}}
+
+;; Shorter names macros
+mac var (*rest) { `defvar($@rest) }
+mac param (*rest) { `defparameter($@rest) }
+mac const (*rest) { `defconstant($@rest) }
+
+
+

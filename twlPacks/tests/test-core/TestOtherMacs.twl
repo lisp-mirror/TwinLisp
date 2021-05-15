@@ -1,0 +1,90 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use unittest {testcase, tName, tFuns, assertEqual, assertTrue, assertFalse, assertCondition}
+
+class TestOtherMacs (testcase) {
+    tName {:initform="TestOtherMacs.twl"}
+    tFuns {:initform='~(&test-new
+                        &test-tl-case
+                        &test-tl-for
+                        &test-tl-times
+                        )}
+    }
+
+class foo {a,b}
+struct soo {a,b}
+cond boo {c,d}
+
+meth &test-new (ts==TestOtherMacs) {
+    ts.assertFalse(foo.new().typep('condition)
+                   :textOnFail="If foo is not subtype of condition, then it is treated as class")
+    ts.assertTrue(boo.new().typep('condition)
+                   :textOnFail="If boo is subtype of condition, then it is treated as condition")
+    ts.assertCondition(error, hoo.new()
+                       :textOnFail="It is not apparent here, but error will talk about missing class")
+    a=soo.new(:a="a",:b=23)
+    ts.assertEqual(a.a, "a")
+    ts.assertEqual(a.b, 23)
+    }
+
+meth &test-tl-case (ts==TestOtherMacs) {
+    a=~[1,2,3]
+    ts.assertTrue(case (a.pop())
+                  is (2) {nil}
+                  is (1+1) {nil}
+                  is (3-1) {nil}
+                  is (3) {t})
+    a=~[1,2,3]
+    ts.assertTrue(case (a.pop())
+                  is (6) {nil}
+                  is (6*3) {nil}
+                  is (8+2) {nil}
+                  else {t})
+    ts.assertTrue(case (~[4,5])
+                  is (6) {nil}
+                  is (~[]) {nil}
+                  is (~[4,5]) {t}
+                  else {nil})
+    ts.assertTrue(case (~[4,5])
+                  is (6) {nil}
+                  is (~[],~[4,5]) {t}
+                  else {nil})
+    }
+
+meth &test-tl-for (ts==TestOtherMacs) {
+    a=~[1,2,3,4,5]
+    c=[]
+    for (elem,a) {
+        c.append(elem)}
+    ts.assertEqual(c,[1,2,3,4,5])
+    c=[]
+    b=[6,7,8,9,0]
+    for (elem,b) {
+        c.append(elem)}
+    ts.assertEqual(c,b)
+    ts.assertEqual(for (elem,b,i=1->i+1) (i-1) {}
+                   b.len())
+    }
+
+meth &test-tl-times (ts==TestOtherMacs) {
+    a = times (i,9,vec=[]) (vec) { vec.append(i) }
+    ts.assertEqual(a,[0,1,2,3,4,5,6,7,8])
+    }
+
+

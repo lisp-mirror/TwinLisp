@@ -1,0 +1,540 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+
+inside "TWINLISP"
+
+;; Generic container funcs
+
+defgen iter (container, &&optional step, initIndex)
+
+defgen next (container, &&optional step)
+    options { :documentation = "Returns two values: 1) 'next' element, which is reached by a step, and 2) boolean value of a success of this operation" }
+
+defgen setter next (newVal, container, &&optional step)
+    options { :documentation = "Returns two values: 1) new value of 'next' element, which is reached by a step, and 2) boolean value of a success of this operation" }
+
+defgen len (container)
+
+defgen _getitem_ (container, indexObject)
+
+defgen setter _getitem_ (newVal, container, indexObject)
+
+defgen index (container, elem)
+
+defgen count (container, elem)
+
+defgen insert (container, indexObject, elem)
+
+defgen pop (container, &&optional indexObject)
+
+defgen remove (container, elem)
+
+defgen append (seq, *elems)
+
+defgen extend (seq, *elems)
+
+
+;; --------------------------------------------------------
+
+
+;; Additional funcs
+
+def &_make-slice_ (start,end,step) {
+    &make-_slice_(:start=start,:end=end,:step=step)}
+
+def &_make-hash-table_ (*keyValPairs) {
+    "This should make new hash-table and populate it with given
+     key->value pairs"
+    do (i=0->i+2
+        tab=&make-hash-table(:test=#'equal))
+       (i>=keyValPairs.len()
+        tab) { tab[keyValPairs[i]] = keyValPairs[i+1] }}
+
+def &_make-vector_ (:initContent->initSeq =? initSeqPresent,
+                    :elemType->elemType=t
+                    :initLen->initDim =? initDimPresent) {
+    if (initSeqPresent) {
+        &make-array(list(initSeq.len())
+                    :&element-type = elemType
+                    :&initial-contents = initSeq.coerce('list)
+                    :adjustable = t, :&fill-pointer = t )}
+    else {
+        &make-array(list(if (initDimPresent) {initDim} else { 0 })
+                    :&element-type = elemType
+                    :adjustable = t, :&fill-pointer = t )}
+    }
+
+def &_get-integer-slice-args_ (seqLen,sl) {
+    "'start', 'end' and 'step' are returned, normalized according to provided
+     _slice_ and sequence length"
+    start @ end = sl.start @ sl.end
+    if (start) {
+        if (start>=0) {
+            if (start>seqLen) { seqLen }
+            else { start }}
+        else {
+            if (-start>=seqLen) { 0 }
+            else { seqLen+start }}}
+    else { 0 } @ \
+    if (end) {
+        if (end>=0) {
+            if (end>seqLen) { seqLen }
+            else { end }}
+        else {
+            if (-end>=seqLen) { 0 }
+            else { seqLen+end }}}
+    else { seqLen } @ sl.step }
+
+def &_positive-index_ (seqLen,ind,seq,errMess) {
+    "Normalizes index to be positive, according to a given sequence length"
+    if ((ind>=0) and (ind<seqLen)) { ind }
+    elif ((ind<0) and (-ind<=seqLen)) { seqLen+ind }
+    else {
+    ;;----------NOT FINISHED----------------
+    ;; should it raise a continuable error? -- what restarts to use then?
+        error('&index-error,:container=seq,:index=ind,:&format-control =errMess)
+        }}
+
+def &err-on-null (lst,errMess) {
+    "Signals an error when given an empty list"
+    if (null(lst)) { error('&null-list-error,:&format-control =errMess) }}
+
+;; --------------------------------------------------------
+
+
+;; Sequence's class methods
+
+meth iter (seq==sequence, step=1, initIndex=?initIndexPresent) {
+    if (initIndexPresent) {
+        &_sequence-iterator_ .new(:sequence=seq,:step=step
+                                  :index=&_positive-index_(seq.len(),initIndex,seq,"Method iter is called on sequence with out-of-range initial index")) }
+    else {
+        &_sequence-iterator_ .new(:sequence=seq,:step=step,:index=0) }}
+
+meth len (seq==sequence) {
+    length(seq)}
+
+meth _getitem_ (seq==sequence, intIndex==integer) {
+    index = &_positive-index_ (seq.len(),intIndex,seq,"Method _getitem_ is called on sequence with out-of-range integer index")
+    seq.elt(index)}
+
+meth setter _getitem_ (newVal, seq==sequence, intIndex==integer) {
+    index = &_positive-index_ (seq.len(),intIndex,seq,,"Method setter _getitem_ is called on sequence with out-of-range integer index")
+    seq.elt(index) = newVal }
+
+meth index (seq==sequence, elem==t) {
+    "Returns an index of the first item==elem in sequence.
+     If it fails, nil is returned"
+    position(elem, seq, :test='&_==_ )}
+
+meth count (seq==sequence, elem==t) {
+    "Returns the number of times elem appears in the sequence"
+    _count(elem, seq, :test='&_==_ )}
+
+;; --------------------------------------------------------
+
+
+;; List's class methods
+
+meth iter (lst==list, step=1, initIndex=?initIndexPresent) {
+    if (initIndexPresent) {
+        &_list-iterator_ .new(:list=nthcdr(&_positive-index_(lst.len(),initIndex,lst,"Method iter is called on list with out-of-range initial index")
+                                           lst),:step=step) }
+    else {
+        &_list-iterator_ .new(:list=nthcdr(0,lst),:step=step) }}
+
+meth len (lst==list) {
+    &list-length(lst)}
+
+meth _getitem_ (lst==list, sl==_slice_) {
+    start @ end @ step = &_get-integer-slice-args_ (lst.len(),sl)
+    if (step) {
+        if ((step>0) and (start<end)) {
+            do (i=start->i+step
+                newSeq=nil,endCons,
+                lstCons=nthcdr(start,lst)->nthcdr(step,lstCons))
+                (i>=end
+                newSeq) {
+                if (null(newSeq)) {
+                    newSeq = cons(lstCons.car(),nil)
+                    endCons = newSeq }
+                else {
+                    endCons.cdr() = cons(lstCons.car(),nil)
+                    endCons = endCons.cdr() }}}
+        elif ((step<0) and (start>end)) {
+            dos (i=0->i+1
+                 newLstLen=(-end-1+start)%(-step)+1
+                 newSeq=nil
+                 lstCons=nthcdr(start+step*(newLstLen-1),lst)->nthcdr(-step,lstCons))
+                (i>=newLstLen
+                 newSeq) {
+                newSeq = cons(lstCons.car(),newSeq) }}
+        else { ~[] }}
+    else {
+        if (start<end) { lst.subseq(start,end) }
+        else { ~[] }}}
+
+flet &insert-list-into-list (lstToIns,lst,start,end) {
+            if (start==0) {
+                tailLeft = nthcdr(end,lst)
+                if (null(lstToIns)) {
+                    lst.car() = tailLeft.car()
+                    lst.cdr() = tailLeft.cdr() }
+                else {
+                    lst.car() = lstToIns.car()
+                    lst.cdr() = lstToIns.cdr()
+                    lst.last().cdr() = tailLeft }}
+            else {
+                consBeforeInsert = nthcdr(start-1,lst)
+                consAfterInsert = if (start>=end) { consBeforeInsert.cdr() }
+                                  else { nthcdr(end-start+1,consBeforeInsert) }
+                consBeforeInsert.cdr() = lstToIns
+                consBeforeInsert.last().cdr() = consAfterInsert }}
+     &set-values-identified-by-slice (seqToIns,lst,start,end,step) {
+            if ((step>0) and (start<end)) {
+                for (elem,seqToIns,lstIter=lst.iter(step,start),i=start->i+step) {
+                    if (i>=end) { break }
+                    else { lstIter.next() = elem }}}
+            elif ((step<0) and (start>end)) {
+                conses = \
+                    dos (i=(end+1)->(i+1),k=0->k+1
+                         conses=&_make-vector_(:initLen=start-end)
+                         intermCons=nthcdr(i,lst) -> intermCons.cdr())
+                        (i>start,conses) {
+                        conses[k] = intermCons }
+                for (elem,seqToIns,i=conses.len()-1->i+step) {
+                    if (i<0) { break }
+                    else { conses[i].car() = elem }}}} {
+    meth setter _getitem_ (lstToIns==list, lst==list, sl==_slice_) {
+        &err-on-null(lst,"Method setter _getitem_ should not be called on null list")
+        start @ end @ step = &_get-integer-slice-args_ (lst.len(),sl)
+        if (step) {
+            &set-values-identified-by-slice (lstToIns,lst,start,end,step) }
+        else {
+            if (start>end) { end = start }
+            &insert-list-into-list (lstToIns.&copy-list(),lst,start,end) }
+        lstToIns }
+    meth setter _getitem_ (seqToIns==sequence, lst==list, sl==_slice_) {
+        &err-on-null(lst,"Method setter _getitem_ should not be called on null list")
+        start @ end @ step = &_get-integer-slice-args_ (lst.len(),sl)
+        if (step) {
+            &set-values-identified-by-slice (seqToIns,lst,start,end,step) }
+        else {
+            if (start>end) { end = start }
+            &insert-list-into-list (seqToIns.coerce('list),lst,start,end) }
+        seqToIns }}
+
+meth append (lst==list, *elems) {
+    lst.extend(elems)}
+
+meth extend (lst==list, *seqs) {
+    &err-on-null(lst,"Method extend should not be called on null list")
+    endCons = lst.last()  ;; will err if lst is circular
+    endp(endCons.cdr())  ;; will err if lst was a dotted list
+    endCons.cdr() = for (seq,seqs
+                         extLst=cons(nil,nil)
+                         lastCons=extLst->lastCons.last())
+                        (extLst.cdr()) {
+                        lastCons.cdr() = if (seq.typep('list)) { seq.&copy-list() }
+                                         else { seq.coerce('list) }}
+    nil}
+
+meth insert (lst==list, intIndex==integer, elem==t) {
+    &err-on-null(lst,"Method insert should not be called on null list")
+    index = &_positive-index_(lst.len()+1,intIndex,lst,"Method insert is called on list with out-of-range integer index")
+    if (index!=0) {
+        nthcdr(index-1,lst).cdr() = cons(elem,nthcdr(index,lst))}
+    else {
+        newCons = cons(lst.car(),lst.cdr())
+        lst.car() = elem
+        lst.cdr() = newCons}
+    nil}
+
+meth pop (lst==list, intIndex=?indexPresent) {
+    "Remove the item at the given position in the list, and return it.
+     When index is not given, the last element is poped.
+     If list initially has only one element, it will be '~(nil) after poping"
+    &err-on-null(lst,"Method pop should not be called on null list")
+    lstLen = lst.len()
+    popedElem = nil
+    if (indexPresent) {
+        index = &_positive-index_ (lstLen,intIndex,lst,"Method pop is called on list with out-of-range integer index")
+        if (lstLen>1) {
+            if (index==0) {
+                popedElem = lst.car()
+                lst.car() = lst.cdr().car()
+                lst.cdr() = lst.cdr().cdr() }
+            else {
+                cutCons = nthcdr(index-1,lst)
+                popedElem = cutCons.cdr().car()
+                cutCons.cdr() = cutCons.cdr().cdr() }}
+        else {
+            popedElem = lst.car()   ;; index==0 anyway
+            lst.car() = nil}}
+    else {
+        if (lstLen>1) {
+            newEndCon = nthcdr(lstLen-2,lst)
+            popedElem = newEndCon.cdr().car()
+            newEndCon.cdr() = nil }
+        else {
+            popedElem = lst.car()
+            lst.car() = nil}}
+    popedElem}
+
+meth remove (lst==list, elem==t) {
+    "Should remove the first item, s.t. item==elem.
+     If succesful, returns index of a removed item,
+     otherwise returns nil"
+    index = lst.index(elem)
+    if (index) { lst.pop(index) }
+    index}
+
+;; --------------------------------------------------------
+
+
+;; Hash-table's class methods
+
+meth len (tab==&hash-table) {
+    &hash-table-count(tab)}
+
+meth _getitem_ (hashTab==&hash-table, key==t) {
+    gethash(key,hashTab)}
+
+meth setter _getitem_ (newVal, hashTab==&hash-table, key==t) {
+    gethash(key,hashTab) = newVal}
+
+meth pop (hashTab==&hash-table, key=?keyPresent) {
+    if (keyPresent) {
+        popedElem = hashTab[key]
+        popedElem @ remhash(key,hashTab) }
+    else { nil @ nil }}
+
+meth has_key (hashTab==&hash-table, key==t) {
+    &nth-value(1,gethash(key,hashTab))}
+
+meth update (tab==&hash-table, upTab==&hash-table) {
+    maphash(#' lambda (key,value) { tab[key] = value }
+            upTab) }
+
+meth tKeys (tab==&hash-table) {
+    keys = []
+    maphash(#' lambda (key,value) {declare(ignore(value)), keys << key}
+            tab)
+    keys}
+
+meth tValues (tab==&hash-table) {
+    values = []
+    maphash(#' lambda (key,value) {declare(ignore(key)), values << value}
+            tab)
+    values}
+
+meth tItems (tab==&hash-table) {
+    items = []
+    maphash(#' lambda (key,value) {items.insert(-1,~[key,value])}
+            tab)
+    items}
+
+meth iter (tab==&hash-table, &&optional step, initIndex) {
+    declare(ignore(step),ignore(initIndex))
+    tab.tItems().iter() }
+
+meth _copy_ (tab==&hash-table) {
+    newTab = {}
+    maphash(#' lambda (key,value) {newTab[key]=value}
+            tab)
+    newTab}
+
+;; --------------------------------------------------------
+
+
+;; Array's class methods
+
+meth _getitem_ (arr==array, coord==list) {
+    apply(#'aref,arr,coord)}
+
+meth setter _getitem_ (newVal, arr==array, coord==list) {
+    apply(#'aref,arr,coord) = newVal }
+
+;; --------------------------------------------------------
+
+
+;; Vector's class methods
+
+glet &subseq-of-vector(vec,start,end)
+        meth (vec==string,start,end) { vec.subseq(start,end) }
+        meth (vec==&bit-vector,start,end) { vec.subseq(start,end) }
+        meth (vec==vector,start,end) {
+            do (res=&_make-vector_(:initLen=(end-start))
+                i=start->i+1, k=0->k+1)
+                (i>=end,res) {
+                res[k] = vec[i] }}
+     &coerce-to-vec-type(newVect,vec)
+        meth (newVect,vec==string) { newVect.coerce('string) }
+        meth (newVect,vec==&bit-vector) { newVect.coerce('&bit-vector) }
+        meth (newVect,vec==vector) { newVect } {
+    
+    meth _getitem_ (vec==vector, sl==_slice_) {
+        start @ end @ step = &_get-integer-slice-args_ (vec.len(),sl)
+        if (step) {
+            if ((step>0) and (start<end)) {
+                do (i=start->i+step, k=0->k+1
+                    tempVec=&_make-vector_(:initLen=(end-1-start)%step+1))
+                    (i>=end, tempVec) {
+                    tempVec[k] = vec[i] }}
+            elif ((step<0) and (start>end)) {
+                do (i=start->i+step, k=0->k+1
+                    tempVec=&_make-vector_(:initLen=(-end-1+start)%(-step)+1))
+                    (i<=end, tempVec) {
+                    tempVec[k] = vec[i] }}
+            else { vec.&subseq-of-vector(0,0) }.&coerce-to-vec-type(vec) }
+        else {
+            if (start<end) { vec.&subseq-of-vector(start,end) }
+            else { vec.&subseq-of-vector(0,0) }}}}
+
+meth setter _getitem_ (seqToIns==sequence, vec==vector, sl==_slice_) {
+    start @ end @ step = &_get-integer-slice-args_ (vec.len(),sl)
+    if (step) {
+        if ((step>0) and (start<end)) {
+            for (elem,seqToIns,vecIter=vec.iter(step,start),i=start->i+step) {
+                if (i>=end) { break }
+                else { vecIter.next() = elem }}}
+        elif ((step<0) and (start>end)) {
+            for (elem,seqToIns,vecIter=vec.iter(step,start),i=start->i+step) {
+                if (i<=end) { break }
+                else { vecIter.next() = elem }}}}
+    else {
+        if (start>end) { end = start }
+        oldVecLen = vec.len()
+        insertLen = seqToIns.len()
+        newVecLen = oldVecLen - (end-start) + insertLen
+        if (oldVecLen<newVecLen) {
+            vec.&adjust-array(~[newVecLen],:&fill-pointer =newVecLen)
+            do (i=newVecLen-1 -> i-1
+                k=oldVecLen-1 -> k-1)
+                (k<end) {
+                vec[i] = vec[k] }
+            for (elem,seqToIns
+                    i=start -> i+1) {
+                vec[i] = elem }}
+        else {
+            for (elem,seqToIns
+                    i=start -> i+1) {
+                vec[i] = elem }
+            do (i=start+insertLen -> i+1
+                k=end -> k+1)
+                (k>=oldVecLen) {
+                vec[i] = vec[k] }
+            vec.&adjust-array(~[newVecLen],:&fill-pointer =newVecLen) }}
+    seqToIns }
+
+meth append (vec==vector, *elems) {
+    vec.extend(elems)}
+
+meth extend (vec==vector, *seqs) {
+    for (seq,seqs) {
+        for (elem,seq) {
+            &vector-push-extend(elem,vec) }}}
+
+meth insert (vec==vector, intIndex==integer, elem==t) {
+    vecLen = vec.len()
+    index = &_positive-index_ (vecLen+1,intIndex,vec,"Method insert is called on vector with out-of-range integer index")
+    if (index==vecLen) {&vector-push-extend(elem,vec)}
+    else {
+        &vector-push-extend(nil,vec)
+        do (i=vecLen-1->i-1) (i<index) {
+            vec[i+1] = vec[i] }
+        vec[index] = elem}
+    nil}
+
+meth pop (vec==vector, intIndex=?indexPresent) {
+    popedElem = nil
+    if (indexPresent) {
+        vecLen = vec.len()
+        index = &_positive-index_ (vecLen,intIndex,vec,"Method pop is called on vector with out-of-range integer index")
+        popedElem = vec[index]
+        do (i=index->i+1) (i>=vecLen-1) {
+            vec[i] = vec[i+1] }}
+    else { popedElem = vec[-1] }
+    vec[-1] = nil   ; do not leave elements above fill-pointer
+    &vector-pop(vec)
+    popedElem}
+
+meth remove (vec==vector, elem==t) {
+    index = vec.index(elem)
+    if (index) { vec.pop(index) }
+    index}
+
+;; --------------------------------------------------------
+
+
+;; iterator method
+
+meth iter (it==_iterator_, step=?stepPresent, initIndex) {
+    declare(ignore(initIndex))
+    if (stepPresent) { it.step = step }
+    it }
+
+;; --------------------------------------------------------
+
+
+;; List-iterator methods
+
+maclet &get-proper-place-and-do-an-operation (operSucc,operFail) {
+            `let (currStep,consToServe) {
+                currStep = if (stepPresent) { step } else { iter.step }
+                if (currStep>=0) {
+                    if (iter.iterStarted) {
+                        consToServe = nthcdr(currStep,iter.lastCons)
+                        if (null(consToServe)) {
+                            ($operFail) @ nil }
+                        else {
+                            iter.lastCons = consToServe
+                            ($operSucc) @ t }}
+                    else {
+                        iter.iterStarted = t
+                        consToServe = iter.lastCons
+                        if (null(consToServe)) { ($operFail) @ nil }
+                        else { ($operSucc) @ t }}}
+                else { ($operFail) @ nil }}} {
+    meth next (iter==&_list-iterator_, step=?stepPresent) {
+        &get-proper-place-and-do-an-operation { consToServe.car(), nil }}
+    meth setter next (newVal, iter==&_list-iterator_, step=?stepPresent) {
+        &get-proper-place-and-do-an-operation { consToServe.car()=newVal, newVal }}}
+
+;; --------------------------------------------------------
+
+
+;; Sequence-iterator methods
+
+maclet &get-proper-place-and-do-an-operation (operSucc,operFail) {
+            `let (currStep,indToServe) {
+                currStep = if (stepPresent) { step } else { iter.step }
+                indToServe = if (iter.iterStarted) { iter.lastIndex + currStep }
+                            else { iter.iterStarted=t, iter.lastIndex }
+                if ((indToServe>=0) and (indToServe<iter.seq.len())) {
+                    iter.lastIndex = indToServe
+                    ($operSucc) @ t }
+                else { ($operFail) @ nil }}} {
+    meth next (iter==&_sequence-iterator_, step=?stepPresent) {
+        &get-proper-place-and-do-an-operation { iter.seq[indToServe], nil }}
+    meth setter next (newVal, iter==&_sequence-iterator_, step=?stepPresent) {
+        &get-proper-place-and-do-an-operation { iter.seq[indToServe]=newVal, newVal }}}
+
+;; --------------------------------------------------------
+

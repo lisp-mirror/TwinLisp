@@ -1,0 +1,61 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+;; load TL before using its methods
+let (tlPath=namestring(ext:cd())) {
+    pathStr = concatenate('string,tlPath,"/**/")
+    &logical-pathname-translations("tl-sys") = ~[~["**;*.*", pathStr ]
+                                                 ~[";**;*.*", pathStr ]] }
+let (&*error-output* = &make-broadcast-stream()) { ; bit sink, like dev/null
+    _load(&logical-pathname("tl-sys:core;tl-def")) }
+
+;; set paths
+let (envTlPath=getenv("TLPATH"),pathList=~[]) {
+    if (envTlPath) {
+        do (colInd) {
+            colInd = envTlPath.index(#\:)
+            if (colInd) {
+                if (envTlPath[->colInd].len()!=0) {
+                        pathList.append(pathname(envTlPath[->colInd])) }
+                envTlPath = envTlPath[colInd+1->] }
+            else {
+                if (envTlPath.len()!=0) {
+                    pathList.append(pathname(envTlPath[->colInd])) }
+                break }}}
+    &*tl-load-paths* = &*tl-load-paths* [->1] + pathList + &*tl-load-paths* [1->] }
+
+;; adjust clisp's *load-paths*
+&*load-paths* = &*tl-load-paths* + &*load-paths*
+
+;; change functions in SYSTEM package that do main loop, break loop and stepping
+ext:&without-package-lock(.("SYSTEM","EXT","COMMON-LISP")) {
+    let (&*error-output* = &make-broadcast-stream()) { ; bit sink, like dev/null
+        load(:&clisp-pluggin) }}
+
+;; load TwinLisp startup file, if any.
+handle {
+    startupFile = getenv("TLSTARTUP")
+    if (startupFile.len()!=0) {
+        _load(startupFile) }}
+cond error (er) {
+    cout() << "~%Error occured while loading startup file:~%~A" % er }
+
+;; TwinLisp greeting
+cout() << "Clisp with TwinLisp." << #\Newline << "Typing :h brings up a help message." << #\Newline
+

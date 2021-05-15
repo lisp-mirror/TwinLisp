@@ -1,0 +1,291 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+inside "TWINLISP"
+
+use regexp { &regexp-compile = re_comp, &regexp-exec = re_exec }
+use regexp: { end = mend, start = mstart }
+
+; PHASE's are phases of string reading
+const( REG_PHASE = :regular_code )
+const( STRING_PHASE = :string_chars )
+const( CLISP_PHASE = :clisp_code )
+
+; precompiled regular expressions
+const( _NON_WHITE_RE = re_comp("^[^" + #\Space + #\Tab + #\Newline + #\Page + #\Return + "]\\+") )
+const( _WHITE_RE = re_comp("^[" + #\Space + #\Tab + #\Newline + #\Page + #\Return + "]\\+") )
+const( _ALPHA_NUM_RE = re_comp("^\\w\\+") )
+const( _CLISP_START_RE = re_comp("^#t{") )
+const( _CLISP_END_RE = re_comp("#t}") )
+const( _CLISP_START_ANYWHERE_RE = re_comp("#t{") )
+const( _DOT_FLOAT_RE = re_comp("^\\.[0-9]\\+[esfdlESFDL][+\\-]\\?[0-9]\\+" + "\\|" + \
+                               "^\\.[0-9]\\+") )
+const( _NUMBER_RE = re_comp("^[0-9]\\+\\.\\?[0-9]*[esfdlESFDL][+\\-]\\?[0-9]\\+" + "\\|" + \
+                            "^[0-9]\\+\\.[0-9]\\+" + "\\|" + "^[0-9]\\+\\.\\?") )
+
+def makeStrElem (elemType,value,strNum,start,end) {
+    StrElem.new(:type=elemType, :value=value
+                :lineNum=strNum, :start=start, :end=end)}
+
+def _startStringPhase(strNum,startIndex,marks) {
+    marks.append(makeStrElem(STR_START_ELEM,string( #\" )
+                             strNum,startIndex,startIndex+1))
+    startIndex+1 @ STRING_PHASE }
+    
+def _findEndOfExprInStr(st,startIndex,termChars) {
+    "
+    Expressions are expected to end by any symbol in termChars. If the first
+    return parameter is True, then expression was terminated correctly. If
+    it is False, then the end of the line was reached.
+    "
+    dos (end=startIndex)
+        (end>=st.len(), nil @ end) {
+        ch = st[end]
+        if (termChars.count(ch)!=0) { break t @ end }
+        elif ( ch==#\\ ) {
+            if ((end+1)<st.len()) { end = end+2 }
+            else { end = end+1 }}
+        else { end = end+1 }}}
+
+def _findEndOfExpr(st,startIndex,termChars) {
+    "
+    Symbol is terminated by one of termChars, or the end of line.
+    "
+    &nth-value(1,_findEndOfExprInStr(st,startIndex,termChars))}
+
+def _procStringPhase(initStr,strNum,startIndex,marks) {
+    st = initStr
+    endingInside @ end = _findEndOfExprInStr(st,startIndex,[ #\" ])
+    elemType @ phase @ end = if (endingInside) { ; include also ending quote
+                                 STR_END_ELEM @ REG_PHASE @ end+1 }
+                             else {
+                                 st = st + #\Newline
+                                 STR_MID_ELEM @ STRING_PHASE @ st.len() }
+    marks.append(makeStrElem(elemType,st[startIndex->end],strNum,startIndex,end))
+    end @ phase }
+
+def _procCLispPhase(st,strNum,startIndex,marks,numOfSyntSwitchLevels) {
+    match = _CLISP_START_ANYWHERE_RE.re_exec(st,:start=startIndex)
+    if (match) {
+        endOfOpenning = match.mend
+        match = _CLISP_END_RE.re_exec(st,:start=startIndex,:end=match.mstart)
+        if (match) {
+            if (numOfSyntSwitchLevels-1==0) {
+                marks.append(makeStrElem(CLISP_END_ELEM,st[startIndex->match.mstart]+#\Newline,
+                                         strNum,startIndex,match.mstart))
+                match.mend @ REG_PHASE @ numOfSyntSwitchLevels-1 }
+            else {
+                marks.append(makeStrElem(CLISP_MID_ELEM,st[startIndex->match.mend],
+                                         strNum,startIndex,match.mend))
+                match.mend @ CLISP_PHASE @ numOfSyntSwitchLevels-1 }}
+        else {
+            marks.append(makeStrElem(CLISP_MID_ELEM,st[startIndex->endOfOpenning],
+                                     strNum,startIndex,endOfOpenning))
+            endOfOpenning @ CLISP_PHASE @ numOfSyntSwitchLevels+1 }}
+    else {
+        match = _CLISP_END_RE.re_exec(st,:start=startIndex)
+        if (match) {
+            if (numOfSyntSwitchLevels-1==0) {
+                marks.append(makeStrElem(CLISP_END_ELEM,st[startIndex->match.mstart]+#\Newline,
+                                         strNum,startIndex,match.mstart))
+                match.mend @ REG_PHASE @ numOfSyntSwitchLevels-1 }
+            else {
+                marks.append(makeStrElem(CLISP_MID_ELEM,st[startIndex->match.mend],
+                                         strNum,startIndex,match.mend))
+                match.mend @ CLISP_PHASE @ numOfSyntSwitchLevels-1 }}
+        else {
+            marks.append(makeStrElem(CLISP_MID_ELEM,st[startIndex->]+#\Newline,strNum,startIndex,st.len()))
+            st.len() @ CLISP_PHASE @ numOfSyntSwitchLevels }}}
+
+def _procAmpName(st,strNum,startIndex,marks) {
+    ; how long is a symbol?
+    end = _findEndOfExpr(st,startIndex+1,[#\Space , #\Tab , #\( , #\) , #\, , #\: ])
+    if (end==startIndex+1) {
+        ; it is a lone operator &
+        marks.append(makeStrElem("&","&",strNum,startIndex,startIndex+1))
+        end = startIndex+1 }
+    else {
+        marks.append(makeStrElem(SYMB_ELEM,st[startIndex+1->end],strNum,startIndex+1,end)) }
+    end}
+
+def _OperLen(st,startIndex) {
+    spChar = st[startIndex]
+    if (MULTI_CHAR_OPERS.has_key(spChar)) {
+        opLen = for (oper,MULTI_CHAR_OPERS[spChar]
+                     highestLenOper=nil)
+                    (highestLenOper.len()){
+                    if (st[startIndex->startIndex+oper.len()]==oper) {
+                        if (highestLenOper.len()<oper.len()) {
+                            highestLenOper = oper }}}
+        if (opLen==0) { 1 }
+        else { opLen }}
+    else { 1 }}
+
+def _procSpecialChars(st,strNum,startIndex,marks) {
+    end = startIndex + _OperLen(st,startIndex)
+    marks.append(makeStrElem(st[startIndex->end],st[startIndex->end],strNum,startIndex,end))
+    end}
+
+def _procSpecSynt(st,strNum,startIndex,marks) {
+    operLen = _OperLen(st,startIndex)
+    end @ elemType = \
+        if (operLen>1) {
+            (startIndex + operLen) @ st[startIndex->startIndex + operLen] }
+        elif ((startIndex+1)<len(st)) {
+            end = _findEndOfExpr(st,startIndex+1,[#\Space , #\Tab , #\( , #\) , #\, ])
+            if (end==(startIndex+1)) { signalSyntaxError("Empty #-y structure") }
+            end @ SYNT_STRUCT_ELEM }
+        else { signalSyntaxError("Empty #-y structure") }
+    marks.append(makeStrElem(elemType,st[startIndex->end],strNum,startIndex,end))
+    end}
+
+def _procDotOrNum(st,strNum,startIndex,marks) {
+    match = _DOT_FLOAT_RE.re_exec(st,:start=startIndex)
+    end @ elemType = \
+        if (match) { ; this is a float number, like .34, or .34e-4
+            match.mend @ NUM_ELEM }
+        else { ; this a dot operator
+            (startIndex+1) @ "." }
+    marks.append(makeStrElem(elemType,st[startIndex->end],strNum,startIndex,end))
+    end}
+
+def markElemsInStr(st,strNum,initPhase=REG_PHASE,clispSyntLevel=0) {
+    marks = []
+    phase = initPhase
+    startIndex = 0
+    numOfSyntSwitchLevels = clispSyntLevel
+    do () (startIndex>=len(st)) {
+        case (phase)
+        is (STRING_PHASE) {
+            startIndex @ phase = _procStringPhase(st,strNum,startIndex,marks)
+            }
+        is (CLISP_PHASE) {
+            startIndex @ phase @ numOfSyntSwitchLevels = \
+                _procCLispPhase(st,strNum,startIndex,marks,numOfSyntSwitchLevels)}
+        is (REG_PHASE) {
+            match = _WHITE_RE.re_exec(st,:start=startIndex)
+            if (match) {
+                marks.append(makeStrElem(WHITE_ELEM,nil,strNum,startIndex,match.mend))
+                startIndex = match.mend }
+            else {
+                match = _NON_WHITE_RE.re_exec(st,:start=startIndex)
+                nonWhiteEnd = match.mend
+                match = _CLISP_START_RE.re_exec(st,:start=startIndex,:end=nonWhiteEnd)
+                if (match) {
+                    numOfSyntSwitchLevels = 1
+                    marks.append(makeStrElem(CLISP_START_ELEM,nil,strNum,startIndex,nil))
+                    phase = CLISP_PHASE
+                    startIndex = match.mend }
+                else {
+                    match = _ALPHA_NUM_RE.re_exec(st,:start=startIndex,:end=nonWhiteEnd)
+                    if (not match) {
+                        ; have some special charachter (non alpha-num) in the beginning
+                        comcase (st[startIndex])
+                        is ( #\& ) {
+                            startIndex = _procAmpName(st,strNum,startIndex,marks) }
+                        is ( #\# ) {
+                            startIndex = _procSpecSynt(st,strNum,startIndex,marks) }
+                        is ( #\. ) {
+                            startIndex = _procDotOrNum(st,strNum,startIndex,marks) }
+                        is ( #\" ) {
+                            startIndex @ phase =_startStringPhase(strNum,startIndex,marks) }
+                        is ( #\; ) {; semicolomn starts comment, which extends till the end
+                            marks.append(makeStrElem(COMM_ELEM,st[startIndex->st.len()],strNum,
+                                                     startIndex,st.len()))
+                            startIndex = st.len() }
+                        else {
+                            startIndex = _procSpecialChars(st,strNum,startIndex,marks) }
+                            }
+                    else {
+                        ; have an alpha-num symbol or a number
+                        alphaNumEnd = match.mend
+                        match = _NUMBER_RE.re_exec(st,:start=startIndex)
+                        if (match) {
+                            marks.append(makeStrElem(NUM_ELEM,st[startIndex->match.mend]
+                                         strNum,startIndex,match.mend))
+                            startIndex = match.mend }
+                        else {
+                            ; have alpha-numeric symbol
+                            symb = st[startIndex->alphaNumEnd]
+                            elType = if (SPEC_SYMB.count(symb)==0) { SYMB_ELEM }
+                                     else { if (OPER_SYMB.count(symb)==0) { SPEC_SYMB_ELEM }
+                                            else { symb }}
+                            marks.append(makeStrElem(elType,symb,strNum,startIndex,alphaNumEnd))
+                            startIndex = alphaNumEnd }}}}}}
+    if ((len(st)==0) and (phase==STRING_PHASE)) {
+        marks.append(makeStrElem(STR_MID_ELEM,string( #\Newline ),strNum,0,1))}
+    marks.append(makeStrElem(LINE_END_ELEM,nil,strNum,nil,nil))
+    marks @ phase @ numOfSyntSwitchLevels}
+
+class GrowingVect {
+    streamObj { :initarg=:streamObj }
+    lineNum { :initarg=:lineNum
+              :initform=0 }
+    stringPhase { :initarg=:stringPhase
+                  :initform=REG_PHASE }
+    clispSyntLevel { :initarg=:clispSyntLevel
+                     :initform=0 }
+    lineElems { :initarg=:lineElems
+                :initform=[] } }
+
+meth &initialize-instance :after (gv==GrowingVect,&&key) {
+    firstLine = gv.streamObj.__readLine()
+    if (firstLine) {
+        gv.lineNum = 1
+        dropLine = if (firstLine.len()>=2) {
+                       if (firstLine[->2]=="#!") { t }
+                       else { nil }}
+                   else { nil }
+        if (dropLine) {
+            gv.__readLine() }
+        else {
+            newElems @ gv.stringPhase @ gv.clispSyntLevel = \
+                markElemsInStr(firstLine,gv.lineNum,gv.stringPhase,gv.clispSyntLevel)
+            gv.lineElems.extend(newElems) }}
+    nil}
+
+meth __readLine (str==stream) {
+    str.&read-line(nil,nil) }
+
+meth __readLine (gv==GrowingVect) {
+    line = gv.streamObj.__readLine()
+    if (line) {
+        gv.lineNum += 1
+        newElems @ gv.stringPhase @ gv.clispSyntLevel = \
+            markElemsInStr(line,gv.lineNum,gv.stringPhase,gv.clispSyntLevel)
+        gv.lineElems.extend(newElems) }
+    nil}
+
+meth len (gv==GrowingVect) {
+    gv.lineElems.len()}
+
+meth _getitem_ (gv==GrowingVect, index==integer) {
+    gv.lineElems[index]}
+
+meth _getitem_ (gv==GrowingVect, sl==_slice_) {
+    gv.lineElems[sl]}
+
+meth growOnIndex (gv==GrowingVect, index==integer) {
+    if (index==gv.len()) {gv.__readLine()}
+    index}
+
+meth growOnIndex (vec==vector, index==integer) {
+    index}
+
+

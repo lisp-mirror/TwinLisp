@@ -1,0 +1,105 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+inside "TWINLISP"
+
+let (twlType="twl",lispType="lisp",faslType="fas",dirLoadFileName="_load_") {
+    labels &translate-file-if-needed (fName) {
+                if (fName.&pathname-type()==twlType) {
+                    twlTime = &file-write-date(fName)
+                    lispName = &merge-pathnames(&make-pathname(:type=lispType),fName)
+                    if (&probe-file(lispName)) {
+                        if (twlTime>&file-write-date(lispName)) {
+                            &translate-file(fName,lispName) }}
+                    else {
+                        &translate-file(fName,lispName) }
+                    lispTime = &file-write-date(lispName)
+                    faslName = &merge-pathnames(&make-pathname(:type=faslType),fName)
+                    if (&probe-file(faslName)) {
+                        if (lispTime>&file-write-date(faslName)) { lispName }
+                        else { faslName }}
+                    else { lispName }}
+                else { fName }}
+        &probe-file-in-paths (fName) {
+                for (defPath,&*tl-load-paths*,res) (nil) {
+                    res = &probe-file(&merge-pathnames(fName,defPath))
+                    if (res) { break res }}}
+        &find-file-in-load-paths (fName) {
+                case (fName.&pathname-type())
+                is (twlType) {
+                    truePath = &probe-file-in-paths(fName)
+                    if (not truePath) {
+                        error("File 'A~' does not exist"%namestring(truePath)) }
+                    &translate-file-if-needed(truePath) @ nil }
+                is (nil) {
+                    truePath = \
+                        for (fileType,~[twlType,lispType,faslType],res) (nil) {
+                            res = &probe-file-in-paths(
+                                &merge-pathnames(fName,&make-pathname(:type=fileType)))
+                            if (res) { break res }}
+                    if (truePath) {
+                        &translate-file-if-needed(truePath) @ nil }
+                    else {
+                        dirLst = fName.&pathname-directory()+\
+                            if (fName.&file-namestring()) { ~[fName.&file-namestring()] }
+                            else { ~[] }
+                        loadFName = &merge-pathnames(
+                            &make-pathname(:directory=dirLst,:name=dirLoadFileName),fName)
+                        truePath = \
+                            for (fileType,~[twlType,lispType,faslType],res) (nil) {
+                                res = &probe-file-in-paths(
+                                    &merge-pathnames(loadFName,&make-pathname(:type=fileType)))
+                                if (res) { break res }}
+                        if (truePath) {
+                            &translate-file-if-needed(truePath) @ &merge-pathnames(
+                                        &make-pathname(:directory=truePath.&pathname-directory()
+                                                    :name=""),fName) }
+                        else { fName @ nil}}}
+                else {
+                    truePath = &probe-file-in-paths(fName)
+                    if (truePath) { truePath @ nil }
+                    else { fName @ nil }}}
+        &find-and-translate-file (filename) {
+                typecase (filename)
+                is (&logical-pathname) {
+                    &find-file-in-load-paths(&translate-logical-pathname(filename)) }
+                is (pathname) {
+                    &find-file-in-load-paths(filename) }
+                is (string) {
+                    &find-file-in-load-paths(pathname(filename)) }
+                is (symbol) {
+                    &find-file-in-load-paths(pathname(("~A"%filename).&string-downcase())) }
+                is (t) {
+                    filename @ nil }} {
+        def &tl-load (filename,*rest) {
+            lispPath @ folder = &find-and-translate-file(filename)
+            if (folder) { &*tl-load-paths* .insert(0,folder) }
+            prog1 {
+                try {
+                    apply(#'_load,~[lispPath]+rest) }
+                finally {
+                    if (folder) { &*tl-load-paths* .remove(folder) }}}}
+        def &tl-require (filename,*rest) {
+            lispPath @ folder = &find-and-translate-file(filename)
+            if (folder) { &*tl-load-paths* .insert(0,folder) }
+            prog1 {
+                try {
+                    apply(#'_require,~[namestring(lispPath)]+rest) }
+                finally {
+                    if (folder) { &*tl-load-paths* .remove(folder) }}}}}}
+

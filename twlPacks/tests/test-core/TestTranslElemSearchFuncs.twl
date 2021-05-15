@@ -1,0 +1,128 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use unittest {testcase, tName, tFuns, assertEqual, assertTrue, assertFalse, assertCondition
+              runOneTest }
+
+
+inside "TWINLISP"
+
+class TestTranslElemSearchFuncs (testcase) {
+    tName {:initform="TestTranslElemSearchFuncs.twl"}
+    tFuns {:initform='~(&test-getElemsInBrackets-1
+                        &test-GetElemsInBrackets-2
+                        &test-GetElemsInBrackets-3
+                        &test-GetElemsInBrackets-4
+                        &test-SkipElems
+                        &test-GetRequiredElemInd
+                        )}
+    }
+
+
+meth &test-getElemsInBrackets-1(ts==TestTranslElemSearchFuncs) {
+        st = "(a)"
+        gv = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+        elems @ end = getElemsInBrackets(0,gv)
+        ts.assertEqual(len(elems),1)
+        ts.assertEqual(end,2)
+        ts.assertEqual(elems[0].value,"a")
+        elems @ end = getElemsInBrackets(0,gv,t)
+        ts.assertEqual(len(elems),3)
+        ts.assertEqual(end,3)
+        ts.assertEqual(elems[0].type,"(")
+        ts.assertEqual(elems[1].value,"a")
+        ts.assertEqual(elems[2].type,")")
+        }
+
+meth &test-GetElemsInBrackets-2(ts==TestTranslElemSearchFuncs) {
+        st = "~((a)+b[{(s)}])"
+        gv = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+        elems @ end = getElemsInBrackets(0,gv)
+        ts.assertEqual(len(elems),12)
+        ts.assertEqual(end,13)
+        ts.assertEqual(elems[8].value,"s")
+        elems @ end = getElemsInBrackets(0,gv,t)
+        ts.assertEqual(len(elems),14)
+        ts.assertEqual(end,14)
+        ts.assertEqual(elems[0].type,"~(")
+        ts.assertEqual(elems[9].value,"s")
+        ts.assertEqual(elems[13].type,")")
+        }
+
+meth &test-GetElemsInBrackets-3(ts==TestTranslElemSearchFuncs) {
+        st = "~((a),
+                b[{(s)}])"
+        gv = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+        elems @ end = getElemsInBrackets(0,gv)
+        ts.assertEqual(len(elems),14)
+        ts.assertEqual(end,15)
+        ts.assertEqual(elems[4].type,LINE_END_ELEM)
+        }
+
+meth &test-GetElemsInBrackets-4(ts==TestTranslElemSearchFuncs) {
+        st = "~((a,
+                 b[{(s)}])"
+        gv = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+        ts.assertCondition(&tl-syntax-error,getElemsInBrackets(0,gv))
+        st = "~((a),
+                b[(s)}])"
+        gv = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+        ts.assertCondition(&tl-syntax-error,getElemsInBrackets(0,gv))
+        }
+
+meth &test-SkipElems(ts==TestTranslElemSearchFuncs) {
+        st = "def foo () 
+                  { a , b \\ t g * ;comment
+                    c}"
+        gv = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+        elemFound @ ind = skipElems([WHITE_ELEM],1,gv)
+        ts.assertTrue(elemFound)
+        ts.assertEqual(gv[ind].value,"foo")
+        elemFound @ ind = skipElems([WHITE_ELEM],3,gv)
+        ts.assertTrue(elemFound)
+        ts.assertEqual(gv[ind].type,"(")
+        elemFound @ ind = skipElems([WHITE_ELEM],6,gv)
+        ts.assertFalse(elemFound)
+        elemFound @ ind = skipElems([WHITE_ELEM],6,gv,nil)
+        ts.assertTrue(elemFound)
+        ts.assertEqual(gv[ind].type,"{")
+        ts.assertEqual(&nth-value(1,skipElems([WHITE_ELEM],ind,gv)),ind)
+        elemFound @ ind = skipElems([WHITE_ELEM,","],ind+3,gv)
+        ts.assertTrue(elemFound)
+        ts.assertEqual(gv[ind].value,"b")
+        elemFound @ ind = skipElems([WHITE_ELEM],ind+1,gv)
+        ts.assertTrue(elemFound)
+        ts.assertEqual(gv[ind].value,"c")
+        }
+
+meth &test-GetRequiredElemInd(ts==TestTranslElemSearchFuncs) {
+        st = "def foo \\
+                      ()
+                      {}"
+        gv = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+        ind = getRequiredElemInd(SYMB_ELEM,1,gv)
+        ts.assertEqual(gv[ind].value,"foo")
+        ind = getRequiredElemInd("(",3,gv)
+        ts.assertEqual(gv[ind].type,"(")
+        ts.assertCondition(&tl-syntax-error,getRequiredElemInd("{",ind+2,gv))
+        ind = getRequiredElemInd("{",ind+2,gv,nil)
+        ts.assertEqual(gv[ind].type,"{")
+        }
+
+

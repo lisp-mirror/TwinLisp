@@ -1,0 +1,417 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use unittest {testcase, tName, tFuns, assertEqual, assertTrue, assertFalse, assertCondition}
+
+class TestContainerMeths (testcase) {
+    tName {:initform="TestContainerMeths.twl"}
+    tFuns {:initform='~(&test-list-methods
+                        &test-vector-methods
+                        &test-array-methods
+                        &test-hashTable-methods1
+                        &test-hashTable-methods2
+                        &test-iterator-methods1
+                        &test-iterator-methods2
+                        &test-get-slice-vector
+                        &test-get-slice-list
+                        &test-setf-slice-vector
+                        &test-setf-slice-list
+                        )}
+    }
+
+meth &test-list-methods (ts==TestContainerMeths) {
+    a = ~[]
+    ts.assertEqual(a.len(), 0)
+    b = ~[1,2,"k"]
+    ts.assertEqual(b.len(), 3)
+    ts.assertCondition(&index-error, a[0]
+                       :textOnFail="index should be out of range")
+    ts.assertEqual(b[0], 1)
+    ts.assertEqual(b[-2], 2)
+    b[-1] = 3
+    ts.assertEqual(b, ~[1,2,3])
+    ts.assertCondition(&null-list-error, a.append("s")
+                       :textOnFail="assert is not supposed to work for nil, so error is raised")
+    b.append(~["a","b"],["c","d"],~[],[])
+    ts.assertEqual(b, ~[1,2,3,~["a","b"],["c","d"],~[],[]])
+    ts.assertCondition(&null-list-error, a.extend(~["s","t"])
+                       :textOnFail="extend is not supposed to work for nil, so error is raised")
+    c = cons(nil,nil)
+    c.extend(~["a","b"],["c","d"],~[],[])
+    ts.assertEqual(c, ~[nil,"a","b","c","d"])
+    ts.assertCondition(&null-list-error, a.insert(0,"s")
+                       :textOnFail="insert is not supposed to work for nil, so error is raised")
+    c.insert(0,"s")
+    ts.assertEqual(c, ~["s",nil,"a","b","c","d"])
+    c.insert(-1,"t")
+    ts.assertEqual(c, ~["s",nil,"a","b","c","d","t"])
+    ts.assertEqual(c.pop(0), "s")
+    ts.assertEqual(c, ~[nil,"a","b","c","d","t"])
+    ts.assertEqual(c.pop(-1), "t")
+    ts.assertEqual(c, ~[nil,"a","b","c","d"])
+    ts.assertEqual(c.pop(), "d")
+    ts.assertEqual(c, ~[nil,"a","b","c"])
+    ts.assertEqual(c.remove("c"), 3)
+    ts.assertEqual(c, ~[nil,"a","b"])
+    ts.assertEqual(c.remove("z"), nil)
+    ts.assertEqual(c, ~[nil,"a","b"])
+    ts.assertEqual(c.index(nil), 0)
+    ts.assertEqual(c.index("b"), 2)
+    ts.assertEqual(c.index("z"), nil)
+    ts.assertEqual(c.count("b"), 1)
+    ts.assertEqual(c.count("z"), 0)
+    c.insert(0,"b")
+    ts.assertEqual(c.count("b"), 2)
+    }
+
+meth &test-vector-methods (ts==TestContainerMeths) {
+    a = []
+    ts.assertEqual(a.len(), 0)
+    b = [1,2,"k"]
+    ts.assertEqual(b.len(), 3)
+    ts.assertCondition(&index-error, a[0]
+                       :textOnFail="index should be out of range")
+    ts.assertEqual(b[0], 1)
+    ts.assertEqual(b[-2], 2)
+    b[-1] = 3
+    ts.assertEqual(b, [1,2,3])
+    a.append(1,2)
+    ts.assertEqual(a, [1,2])
+    b.append(~["a","b"],["c","d"],~[],[])
+    ts.assertEqual(b, [1,2,3,~["a","b"],["c","d"],~[],[]])
+    a.extend(~["a","b"],["c","d"],~[],[])
+    ts.assertEqual(a, [1,2,"a","b","c","d"])
+    a.insert(0,"s")
+    ts.assertEqual(a, ["s",1,2,"a","b","c","d"])
+    a.insert(-1,"t")
+    ts.assertEqual(a, ["s",1,2,"a","b","c","d","t"])
+    ts.assertEqual(a[5->], ["c","d","t"])
+    ts.assertEqual(a[5->6], ["c"])
+    ts.assertEqual(a[6->5], [])
+    ts.assertEqual(a[->2], ["s",1])
+    ts.assertEqual(a[0->,2], ["s",2,"b","d"])
+    ts.assertEqual(a[3->6,2], ["a","c"])
+    ts.assertEqual(a[9->10], [])
+    ts.assertEqual(a[-6->-2,2], [2,"b"])
+    ts.assertEqual(a.pop(0), "s")
+    ts.assertEqual(a, [1,2,"a","b","c","d","t"])
+    ts.assertEqual(a.pop(-1), "t")
+    ts.assertEqual(a, [1,2,"a","b","c","d"])
+    ts.assertEqual(a.pop(), "d")
+    ts.assertEqual(a, [1,2,"a","b","c"])
+    ts.assertEqual(a.remove("c"), 4)
+    ts.assertEqual(a, [1,2,"a","b"])
+    ts.assertEqual(a.remove("z"), nil)
+    ts.assertEqual(a, [1,2,"a","b"])
+    ts.assertEqual(a.index(1), 0)
+    ts.assertEqual(a.index("b"), 3)
+    ts.assertEqual(a.index("z"), nil)
+    ts.assertEqual(a.count("b"), 1)
+    ts.assertEqual(a.count("z"), 0)
+    a.insert(0,"b")
+    ts.assertEqual(a.count("b"), 2)
+    }
+
+meth &test-array-methods (ts==TestContainerMeths) {
+    a = &make-array('~(2,2)
+                    :&initial-contents ='~(~(1,2)
+                                           ~(3,4)))
+    ts.assertEqual(a['~(0,0)], 1)
+    ts.assertEqual(a['~(1,0)], 3)
+    a['~(1,0)] = 99
+    ts.assertEqual(a['~(1,0)], 99)
+    }
+
+meth &test-hashTable-methods1 (ts==TestContainerMeths) {
+    a = {}
+    ts.assertEqual(a.len(), 0)
+    b = {"abc" -> 1,
+         "cde" -> 2,
+         "nil" -> nil}
+    ts.assertEqual(b.len(), 3)
+    val @ keyFound = b["abc"]
+    ts.assertTrue(keyFound)
+    ts.assertEqual(val, 1)
+    val @ keyFound = b["nil"]
+    ts.assertTrue(keyFound)
+    ts.assertEqual(val, nil)
+    val @ keyFound = b["ABC"]
+    ts.assertFalse(keyFound)
+    ts.assertEqual(val, nil)
+    ts.assertTrue(b.has_key("abc"))
+    ts.assertFalse(b.has_key("ABC"))
+    ts.assertTrue(b.tKeys().vectorp())
+    ts.assertEqual(b.tKeys().len(), 3)
+    ts.assertTrue(b.tValues().vectorp())
+    ts.assertEqual(b.tValues().len(), 3)
+    ts.assertTrue(b.tItems().vectorp())
+    ts.assertEqual(b.tItems().len(), 3)
+    ts.assertTrue(b.tItems()[0].listp())
+    ts.assertEqual(b.tItems()[0].len(), 2)
+    ts.assertEqual(b["cde"], 2)
+    popedElem @ succ = b.pop("cde")
+    ts.assertTrue(succ)
+    ts.assertEqual(popedElem, 2)
+    ts.assertFalse(b.has_key("cde"))
+    popedElem @ succ = b.pop("xxx")
+    ts.assertFalse(succ)
+    ts.assertEqual(popedElem, nil)
+    b["vect"] = []
+    }
+
+meth &test-hashTable-methods2 (ts==TestContainerMeths) {
+    a = {}
+    a.update({1->"a","b"->2})
+    ts.assertEqual(a, {1->"a","b"->2})
+    a.update({1->"h","c"->3})
+    ts.assertEqual(a, {1->"h","b"->2,"c"->3})
+    }
+
+meth &test-iterator-methods1 (ts==TestContainerMeths) {
+    a = ["a","b","c","d","e","f","g","h","i"]
+    iter = a.iter()
+    ts.assertEqual(&multiple-value-list(iter.next()),~["a",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["b",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["b",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["c",t])
+    ts.assertEqual(&multiple-value-list(iter.next(2)),~["e",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["e",t])
+    ts.assertEqual(&multiple-value-list(iter.next(-2)),~["c",t])
+    ts.assertEqual(&multiple-value-list(iter.next(-10)),~[nil,nil])
+    ts.assertEqual(&multiple-value-list(iter.next(10)),~[nil,nil])
+    iter = a.iter(2)
+    ts.assertEqual(&multiple-value-list(iter.next()),~["a",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["c",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["c",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["e",t])
+    ts.assertEqual(&multiple-value-list(iter.next(1)),~["f",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["f",t])
+    ts.assertEqual(&multiple-value-list(iter.next(-2)),~["d",t])
+    iter = a.iter(2,3)
+    ts.assertEqual(&multiple-value-list(iter.next()),~["d",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["f",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["f",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["h",t])
+    ts.assertEqual(&multiple-value-list(iter.next(1)),~["i",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["i",t])
+    ts.assertEqual(&multiple-value-list(iter.next(-2)),~["g",t])
+    iter = a.iter(-3,-1)
+    ts.assertEqual(&multiple-value-list(iter.next()),~["i",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["f",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["c",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~[nil,nil])
+    iter = a.iter(-3,-1)
+    ts.assertEqual(&multiple-value-list {iter.next() = 0},~[0,t])
+    ts.assertEqual(&multiple-value-list {iter.next() = 1},~[1,t])
+    ts.assertEqual(&multiple-value-list {iter.next() = 2},~[2,t])
+    ts.assertEqual(&multiple-value-list {iter.next() = 3},~[3,nil])
+    ts.assertEqual(a,["a","b",2,"d","e",1,"g","h",0])
+    }
+
+meth &test-iterator-methods2 (ts==TestContainerMeths) {
+    a = ~["a","b","c","d","e","f","g","h","i"]
+    iter = a.iter()
+    ts.assertEqual(&multiple-value-list(iter.next()),~["a",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["b",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["b",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["c",t])
+    ts.assertEqual(&multiple-value-list(iter.next(2)),~["e",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["e",t])
+    ts.assertEqual(&multiple-value-list(iter.next(-2)),~[nil,nil])
+    ts.assertEqual(&multiple-value-list(iter.next(-10)),~[nil,nil])
+    ts.assertEqual(&multiple-value-list(iter.next(10)),~[nil,nil])
+    iter = a.iter(2)
+    ts.assertEqual(&multiple-value-list(iter.next()),~["a",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["c",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["c",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["e",t])
+    ts.assertEqual(&multiple-value-list(iter.next(1)),~["f",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["f",t])
+    ts.assertEqual(&multiple-value-list(iter.next(-2)),~[nil,nil])
+    iter = a.iter(2,3)
+    ts.assertEqual(&multiple-value-list(iter.next()),~["d",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["f",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["f",t])
+    ts.assertEqual(&multiple-value-list(iter.next()),~["h",t])
+    ts.assertEqual(&multiple-value-list(iter.next(1)),~["i",t])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["i",t])
+    ts.assertEqual(&multiple-value-list(iter.next(-2)),~[nil,nil])
+    iter = a.iter(-3,-3)
+    ts.assertEqual(&multiple-value-list(iter.next()),~[nil,nil])
+    ts.assertEqual(&multiple-value-list(iter.next(0)),~["g",t])
+    ts.assertEqual(&multiple-value-list(iter.next(1)),~["h",t])
+    iter = a.iter(3)
+    ts.assertEqual(&multiple-value-list {iter.next() = 0},~[0,t])
+    ts.assertEqual(&multiple-value-list {iter.next() = 1},~[1,t])
+    ts.assertEqual(&multiple-value-list {iter.next() = 2},~[2,t])
+    ts.assertEqual(&multiple-value-list {iter.next() = 3},~[3,nil])
+    ts.assertEqual(a,~[0,"b","c",1,"e","f",2,"h","i"])
+    }
+
+meth &test-get-slice-vector (ts==TestContainerMeths) {
+    a = ["a","b","c","d","e","f","g","h","i"]
+    ts.assertEqual(a[4->], ["e","f","g","h","i"])
+    ts.assertEqual(a[->3], ["a","b","c"])
+    ts.assertEqual(a[-2->], ["h","i"])
+    ts.assertEqual(a[->-5], ["a","b","c","d"])
+    ts.assertEqual(a[3->-4], ["d","e"])
+    ts.assertEqual(a[4->6], ["e","f"])
+    ts.assertEqual(a[-4->-2], ["f","g"])
+    ts.assertEqual(a[6->4], [])
+    ts.assertEqual(a[-2->-4], [])
+    ts.assertEqual(a[6->4,-1], ["g","f"])
+    ts.assertEqual(a[-2->-4,-1], ["h","g"])
+    ts.assertEqual(a[-20->2],["a","b"])
+    ts.assertEqual(a[-2->20],["h","i"])
+    ts.assertEqual(a[0->],["a","b","c","d","e","f","g","h","i"])
+    ts.assertEqual(a[-1->0,-1],["i","h","g","f","e","d","c","b"])
+    ts.assertEqual(a[0->-1,0],[])
+    }
+
+meth &test-get-slice-list (ts==TestContainerMeths) {
+    a = ~["a","b","c","d","e","f","g","h","i"]
+    ts.assertEqual(a[4->], ~["e","f","g","h","i"])
+    ts.assertEqual(a[->3], ~["a","b","c"])
+    ts.assertEqual(a[-2->], ~["h","i"])
+    ts.assertEqual(a[->-5], ~["a","b","c","d"])
+    ts.assertEqual(a[3->-4], ~["d","e"])
+    ts.assertEqual(a[4->6], ~["e","f"])
+    ts.assertEqual(a[-4->-2], ~["f","g"])
+    ts.assertEqual(a[6->4], ~[])
+    ts.assertEqual(a[-2->-4], ~[])
+    ts.assertEqual(a[6->4,-1], ~["g","f"])
+    ts.assertEqual(a[-2->-4,-1], ~["h","g"])
+    ts.assertEqual(a[-20->2],~["a","b"])
+    ts.assertEqual(a[-2->20],~["h","i"])
+    ts.assertEqual(a[0->],~["a","b","c","d","e","f","g","h","i"])
+    ts.assertEqual(a[-1->0,-1],~["i","h","g","f","e","d","c","b"])
+    ts.assertEqual(a[0->-1,0],~[])
+    }
+
+meth &test-setf-slice-vector (ts==TestContainerMeths) {
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[-2->]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c","d","e","f","g",1,2,3]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->4]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c",1,2,3,"e","f","g","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->3]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c",1,2,3,"d","e","f","g","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->2]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c",1,2,3,"d","e","f","g","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->7]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c",1,2,3,"h","i"]) }
+    for (sliceToIns,[[],~[]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->7]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[7->1]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c","d","e","f","g",1,2,3,"h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[-1->0]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c","d","e","f","g","h",1,2,3,"i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[0->]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,[1,2,3]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->7,2]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c",1,"e",2,"g","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->7,1]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c",1,2,3,"g","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[7->3,-2]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c","d","e",2,"g",1,"i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[7->3,-1]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,["a","b","c","d","e",3,2,1,"i"]) }
+    }
+
+meth &test-setf-slice-list (ts==TestContainerMeths) {
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[-2->]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c","d","e","f","g",1,2,3]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->4]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c",1,2,3,"e","f","g","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->3]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c",1,2,3,"d","e","f","g","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->2]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c",1,2,3,"d","e","f","g","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->7]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c",1,2,3,"h","i"]) }
+    for (sliceToIns,[[],~[]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->7]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[7->1]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c","d","e","f","g",1,2,3,"h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[-1->0]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c","d","e","f","g","h",1,2,3,"i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[0->]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~[1,2,3]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->7,2]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c",1,"e",2,"g","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[3->7,1]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c",1,2,3,"g","h","i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[7->3,-2]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c","d","e",2,"g",1,"i"]) }
+    for (sliceToIns,[[1,2,3],~[1,2,3]],a) {
+        a = ~["a","b","c","d","e","f","g","h","i"]
+        ts.assertTrue(eq( (a[7->3,-1]=sliceToIns), sliceToIns))
+        ts.assertEqual(a,~["a","b","c","d","e",3,2,1,"i"]) }
+    }
+
+
+

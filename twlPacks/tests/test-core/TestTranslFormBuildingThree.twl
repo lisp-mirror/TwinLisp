@@ -1,0 +1,537 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use unittest {testcase, tName, tFuns, assertEqual, assertTrue, assertCondition
+              runOneTest }
+
+
+inside "TWINLISP"
+
+class TestTranslFormBuildingThree (testcase) {
+    tName {:initform="TestTranslFormBuildingThree.twl"}
+    tFuns {:initform='~(&test-getForms-Struct-1
+                        &test-getForms-Struct-2
+                        &test-getForms-Struct-3
+                        &test-getForms-Struct-4
+                        &test-getForms-Struct-5
+                        &test-getForms-Class-1
+                        &test-getForms-Class-2
+                        &test-getForms-Class-3
+                        &test-getForms-Class-4
+                        &test-getForms-Class-5
+                        &test-getForms-Meth-1
+                        &test-getForms-Meth-2
+                        &test-getForms-Meth-3
+                        &test-getForms-Use-1
+                        &test-getForms-Use-2
+                        &test-getForms-Use-3
+                        &test-getForms-Use-4
+                        &test-getForms-Use-5
+                        &test-getForms-ImplicitLexscope-1
+                        &test-getForms-ImplicitLexscope-2
+                        &test-getForms-ImplicitLexscope-3
+                        &test-getForms-ImplicitLexscope-4
+                        &test-getForms-ImplicitLexscope-5
+                        &test-getForms-ImplicitLexscope-6
+                        &test-getForms-ImplicitLexscope-7
+                        &test-getForms-ImplicitLexscope-8
+                        &test-getForms-ImplicitLexscope-9
+                        &test-getForms-ImplicitLexscope-10
+                        &test-getForms-ImplicitLexscope-11
+                        &test-getForms-ImplicitLexscope-12
+                        &test-getForms-ImplicitLexscope-13
+                        &test-getForms-ImplicitLexscope-14
+                        &test-getForms-ImplicitLexscope-15
+                        &test-getForms-ImplicitLexscope-16
+                        )}
+    }
+
+
+meth  &test-getForms-Struct-1(ts==TestTranslFormBuildingThree) {
+    st = "struct foo {}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defstruct"],~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]]]]])
+    }
+
+meth  &test-getForms-Struct-2(ts==TestTranslFormBuildingThree) {
+    st = "struct foo {a b
+                      c}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defstruct"],~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]],
+                      ~[ATOM_TYPE,"a"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"c"]]]])
+    }
+
+meth  &test-getForms-Struct-3(ts==TestTranslFormBuildingThree) {
+    st = "struct foo {a{0} b{1}
+                      c}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defstruct"],~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"0"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"1"]]],
+                      ~[ATOM_TYPE,"c"]]]])
+    }
+
+meth  &test-getForms-Struct-4(ts==TestTranslFormBuildingThree) {
+    st = "struct foo { a {0,:type=integer}
+                       b {1,:&read-only }
+                       c}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defstruct"],~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"0"],
+                                   ~[ATOM_TYPE,":type"],~[ATOM_TYPE,"integer"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"1"],~[ATOM_TYPE,":read-only"]]],
+                      ~[ATOM_TYPE,"c"]]]])
+    }
+
+meth  &test-getForms-Struct-5(ts==TestTranslFormBuildingThree) {
+    st = "struct foo { a {0,:type=integer}
+                       b {1,:&read-only }}
+          options {:include=boo,:named}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defstruct"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,":include"],~[ATOM_TYPE,"boo"]]],
+                                   ~[ATOM_TYPE,":named"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"0"],
+                                   ~[ATOM_TYPE,":type"],~[ATOM_TYPE,"integer"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"b"],~[ATOM_TYPE,"1"],~[ATOM_TYPE,":read-only"]]]]]])
+    }
+
+meth  &test-getForms-Class-1(ts==TestTranslFormBuildingThree) {
+    st = "class foo {}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defclass"],~[ATOM_TYPE,"foo"],
+                      ~[FORM_TYPE,[]],~[FORM_TYPE,[]]]]])
+    }
+
+meth  &test-getForms-Class-2(ts==TestTranslFormBuildingThree) {
+    st = "class foo {a b
+                     c}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defclass"],~[ATOM_TYPE,"foo"],
+                      ~[FORM_TYPE,[]],~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"c"]]]]]])
+    }
+
+meth  &test-getForms-Class-3(ts==TestTranslFormBuildingThree) {
+    st = "class foo {
+              a {:type=integer}
+              c}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defclass"],~[ATOM_TYPE,"foo"],~[FORM_TYPE,[]],
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,":type"],
+                                                ~[ATOM_TYPE,"integer"]]],
+                                   ~[ATOM_TYPE,"c"]]]]]])
+    }
+
+meth  &test-getForms-Class-4(ts==TestTranslFormBuildingThree) {
+    st = "class foo {
+              a {:type=integer}
+              c}
+           options {
+               :documentation=\"doc-string\"
+               :metaclass=boo}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defclass"],~[ATOM_TYPE,"foo"],~[FORM_TYPE,[]],
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,":type"],
+                                                ~[ATOM_TYPE,"integer"]]],
+                                   ~[ATOM_TYPE,"c"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":documentation"],~[ATOM_TYPE,"\"doc-string\""]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":metaclass"],~[ATOM_TYPE,"boo"]]]]]])
+    }
+
+meth  &test-getForms-Class-5(ts==TestTranslFormBuildingThree) {
+    st = "class foo (super1,super2) {
+              a {:type=integer}
+              ; this comment will be dropped out entirely
+              c}
+          options {
+              :documentation=\"doc-string\"
+              :metaclass=boo}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defclass"],~[ATOM_TYPE,"foo"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"super1"],~[ATOM_TYPE,"super2"]]],
+                      ~[FORM_TYPE,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,":type"],
+                                                ~[ATOM_TYPE,"integer"]]],
+                                   ~[ATOM_TYPE,"c"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":documentation"],~[ATOM_TYPE,"\"doc-string\""]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,":metaclass"],~[ATOM_TYPE,"boo"]]]]]])
+    }
+
+meth  &test-getForms-Meth-1(ts==TestTranslFormBuildingThree) {
+    st = "meth foo (a){}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defmethod"],~[ATOM_TYPE,"foo"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"]]]]]])
+    }
+
+meth  &test-getForms-Meth-2(ts==TestTranslFormBuildingThree) {
+    st = "meth foo :after (a){}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defmethod"],~[ATOM_TYPE,"foo"],~[ATOM_TYPE,":after"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"]]]]]])
+    }
+
+meth  &test-getForms-Meth-3(ts==TestTranslFormBuildingThree) {
+    st = "meth setter foo (a){}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defmethod"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"foo"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"]]]]]])
+    }
+
+meth  &test-getForms-Use-1(ts==TestTranslFormBuildingThree) {
+    st = "use foo {x,y,z}
+          x(a)
+          y(b)
+          z(c)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"foo:x"],~[ATOM_TYPE,"a"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"foo:y"],~[ATOM_TYPE,"b"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"foo:z"],~[ATOM_TYPE,"c"]]]])
+    }
+
+meth  &test-getForms-Use-2(ts==TestTranslFormBuildingThree) {
+    st = "use foo {x=e,y=f,z}
+          e(a)
+          x(a)
+          f(b)
+          y(b)
+          z(c)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"foo:x"],~[ATOM_TYPE,"a"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"x"],~[ATOM_TYPE,"a"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"foo:y"],~[ATOM_TYPE,"b"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"y"],~[ATOM_TYPE,"b"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"foo:z"],~[ATOM_TYPE,"c"]]]])
+    }
+
+meth  &test-getForms-Use-3(ts==TestTranslFormBuildingThree) {
+    st = "use foo: {x,y,z}
+          x(a)
+          y(b)
+          z(c)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"foo::x"],~[ATOM_TYPE,"a"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"foo::y"],~[ATOM_TYPE,"b"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"foo::z"],~[ATOM_TYPE,"c"]]]])
+    }
+
+meth  &test-getForms-Use-4(ts==TestTranslFormBuildingThree) {
+    st = "use foo {x}
+          func(x)
+          func(:x)
+          func(cl:x)
+          func(cl::x)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"func"],~[ATOM_TYPE,"foo:x"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"func"],~[ATOM_TYPE,":x"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"func"],~[ATOM_TYPE,"cl:x"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"func"],~[ATOM_TYPE,"cl::x"]]]])
+    }
+
+meth  &test-getForms-Use-5(ts==TestTranslFormBuildingThree) {
+    st = "use {x=a,y=b}
+          a(1)
+          b(2)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"x"],~[ATOM_TYPE,"1"]]],
+             ~[FORM_TYPE,[~[ATOM_TYPE,"y"],~[ATOM_TYPE,"2"]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-1(ts==TestTranslFormBuildingThree) {
+    st = "progn{
+              foo(x)
+              x=1
+              foo(x)}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"x"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],
+                                                ~[ATOM_TYPE,"x"],~[ATOM_TYPE,"1"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-2(ts==TestTranslFormBuildingThree) {
+    st = "progn{
+              foo(x)
+              x=y=1
+              foo(x)}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"y"],~[ATOM_TYPE,"x"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"y"],
+                                                             ~[ATOM_TYPE,"1"]]]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-3(ts==TestTranslFormBuildingThree) {
+    st = "progn{
+              foo(x)
+              x=0
+              y=1
+              foo(x)
+              z:a=2}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"x"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],~[ATOM_TYPE,"0"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"y"]]],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],
+                                                             ~[ATOM_TYPE,"y"],~[ATOM_TYPE,"1"]]],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"z:a"],
+                                                             ~[ATOM_TYPE,"2"]]]]]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-4(ts==TestTranslFormBuildingThree) {
+    st = "progn{
+              foo(x)
+              x=1
+              global y
+              y=0
+              foo(x)}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"x"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],~[ATOM_TYPE,"1"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"y"],~[ATOM_TYPE,"0"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-5(ts==TestTranslFormBuildingThree) {
+    st = "progn{
+              foo(x)
+              x=1
+              x=0
+              foo(x)}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"x"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],~[ATOM_TYPE,"1"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],~[ATOM_TYPE,"0"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-6(ts==TestTranslFormBuildingThree) {
+    st = "progn{
+              foo(x)
+              x=1
+              lexscope explicit
+              y=0
+              foo(x)}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"x"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],~[ATOM_TYPE,"1"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"y"],~[ATOM_TYPE,"0"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-7(ts==TestTranslFormBuildingThree) {
+    st = "progn{
+              foo(x)
+              x=0
+              lexscope explicit
+              z=1
+              lexscope implicit
+              y=2
+              foo(x)}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"x"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],~[ATOM_TYPE,"0"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"z"],~[ATOM_TYPE,"1"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"y"]]],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],
+                                                             ~[ATOM_TYPE,"y"],~[ATOM_TYPE,"2"]]],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]]]]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-8(ts==TestTranslFormBuildingThree) {
+    st = "progn{
+              foo(x)
+              x=0
+              lexscope explicit
+              z=1
+              lexscope implicit
+              y=2
+              foo(x)}"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo(:implScope=t,:explScopeWarn=t)))
+    }
+
+meth  &test-getForms-ImplicitLexscope-9(ts==TestTranslFormBuildingThree) {
+    st = "progn{
+              foo(x)
+              x=0
+              lexscope explicit
+              global z
+              z=1
+              lexscope implicit
+              y=2
+              foo(x)}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),
+                     makeLevelInfo(:implScope=t,:explScopeWarn=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"x"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],~[ATOM_TYPE,"0"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"z"],~[ATOM_TYPE,"1"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"y"]]],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],
+                                                             ~[ATOM_TYPE,"y"],~[ATOM_TYPE,"2"]]],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"x"]]]]]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-10(ts==TestTranslFormBuildingThree) {
+    st = "def foo (a) {
+              a = 1
+              b = 2}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),
+                     makeLevelInfo(:implScope=t,:explScopeWarn=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defun"],~[ATOM_TYPE,"foo"],~[FORM_TYPE,[~[ATOM_TYPE,"a"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"1"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"b"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"2"]]]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-11(ts==TestTranslFormBuildingThree) {
+    st = "mac foo (a) {
+              a = 1
+              b = 2}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defmacro"],~[ATOM_TYPE,"foo"],~[FORM_TYPE,[~[ATOM_TYPE,"a"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"1"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"2"]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-12(ts==TestTranslFormBuildingThree) {
+    st = "a = 1
+          b = 2
+          mac foo (a) {
+              a = 1
+              b = 2}"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo(:implScope=t,:explScopeWarn=t)))
+    }
+
+meth  &test-getForms-ImplicitLexscope-13(ts==TestTranslFormBuildingThree) {
+    st = "a = 1
+          b = 2
+          mac foo (a) {
+              a = 1
+              global b
+              b = 2}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),
+                     makeLevelInfo(:implScope=t,:explScopeWarn=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"1"]]],
+         ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"2"]]],
+         ~[FORM_TYPE,[~[ATOM_TYPE,"cl:defmacro"],~[ATOM_TYPE,"foo"],~[FORM_TYPE,[~[ATOM_TYPE,"a"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"1"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"2"]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-14(ts==TestTranslFormBuildingThree) {
+    st = "a = 1
+          b = 2
+          def foo (a) {
+              a = 1
+              b = 2}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),
+                     makeLevelInfo(:implScope=t,:explScopeWarn=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"1"]]],
+         ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"2"]]],
+         ~[FORM_TYPE,[~[ATOM_TYPE,"cl:defun"],~[ATOM_TYPE,"foo"],~[FORM_TYPE,[~[ATOM_TYPE,"a"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"1"]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"b"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"2"]]]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-15(ts==TestTranslFormBuildingThree) {
+    st = "def foo (a,b=lambda{a=1}) { a=9 }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t,:explScopeWarn=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:defun"],~[ATOM_TYPE,"foo"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"&optional"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"b"],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"cl:lambda"],~[FORM_TYPE,[]],
+                                                             ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],
+                                                                     ~[FORM_TYPE,[~[ATOM_TYPE,"a"]]],
+                                                                     ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],
+                                                                                  ~[ATOM_TYPE,"a"],
+                                                                                  ~[ATOM_TYPE,"1"]]]]]]]]]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"9"]]]]]])
+    }
+
+meth  &test-getForms-ImplicitLexscope-16(ts==TestTranslFormBuildingThree) {
+    st = "progn{
+              x @ y = foo()
+              x+y}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(:implScope=t))
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:progn"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:let"],~[FORM_TYPE,[~[ATOM_TYPE,"x"],~[ATOM_TYPE,"y"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"cl:values"],~[ATOM_TYPE,"x"],
+                                                             ~[ATOM_TYPE,"y"]]],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],~[ATOM_TYPE,"y"]]]]]]]])
+    }
+
+
+
+

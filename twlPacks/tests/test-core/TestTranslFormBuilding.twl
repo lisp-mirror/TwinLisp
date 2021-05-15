@@ -1,0 +1,944 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use unittest {testcase, tName, tFuns, assertEqual, assertTrue, assertCondition
+              runOneTest }
+
+
+inside "TWINLISP"
+
+class TestTranslFormBuilding (testcase) {
+    tName {:initform="TestTranslFormBuilding.twl"}
+    tFuns {:initform='~(&test-getForms-BracketForm-1
+                        &test-getForms-BracketForm-2
+                        &test-getForms-BracketForm-3
+                        &test-getForms-BracketForm-4
+                        &test-getForms-OperForm-1
+                        &test-getForms-OperForm-2
+                        &test-getForms-OperForm-3
+                        &test-getForms-OperForm-4
+                        &test-getForms-OperForm-5
+                        &test-getForms-OperForm-6
+                        &test-getForms-OperForm-7
+                        &test-getForms-OperForm-8
+                        &test-getForms-OperForm-9
+                        &test-getForms-OperForm-10
+                        &test-getForms-OperForm-11
+                        &test-getForms-OperForm-12
+                        &test-getForms-OperForm-13
+                        &test-getForms-OperForm-14
+                        &test-getForms-OperForm-15
+                        &test-getForms-OperForm-16
+                        &test-getForms-OperForm-17
+                        &test-getForms-OperForm-18
+                        &test-getForms-OperForm-19
+                        &test-getForms-OperForm-20
+                        &test-getForms-OperForm-21
+                        &test-getForms-OperForm-22
+                        &test-getForms-OperForm-23
+                        &test-getForms-OperForm-24
+                        &test-getForms-OperForm-25
+                        &test-getForms-OperForm-26
+                        &test-getForms-OperForm-27
+                        &test-getForms-OperForm-28
+                        &test-getForms-OperForm-29
+                        &test-getForms-ComplexNum-1
+                        &test-getForms-ComplexNum-2
+                        &test-getForms-ComplexNum-3
+                        &test-getForms-Array-1
+                        &test-getForms-Array-2
+                        &test-getForms-List-1
+                        &test-getForms-List-2
+                        &test-getForms-BodyBlock-1
+                        &test-getForms-BodyBlock-2
+                        &test-getForms-BodyBlock-3
+                        &test-getForms-BodyBlock-4
+                        &test-getForms-BodyBlock-5
+                        &test-getForms-String-1
+                        &test-getForms-String-2
+                        &test-getForms-String-3
+                        &test-getForms-CLisp-1
+                        &test-getForms-CLisp-2
+                        &test-getForms-Column-1
+                        &test-getForms-Column-2
+                        &test-getForms-Column-3
+                        &test-getForms-Column-4
+                        &test-getForms-Column-5
+                        &test-getForms-Column-6
+                        &test-getForms-Column-7
+                        &test-getForms-ObjSlots-1
+                        &test-getForms-ObjSlots-2
+                        &test-getForms-ObjSlots-3
+                        &test-getForms-ObjSlots-4
+                        &test-getForms-ObjMeth-1
+                        &test-getForms-ObjMeth-2
+                        &test-getForms-ObjMeth-3
+                        &test-getForms-ObjMeth-4
+                        &test-getForms-ObjMeth-5
+                        &test-getForms-Func-1
+                        &test-getForms-Func-2
+                        &test-getForms-Func-3
+                        &test-getForms-Func-4
+                        &test-getForms-Func-5
+                        &test-getForms-InnerFuncCallList-1
+                        &test-getForms-Dict-1
+                        &test-getForms-Dict-2
+                        &test-getForms-Dict-3
+                        &test-getForms-Dict-4
+                        &test-getForms-Dict-5
+                        &test-getForms-Dict-6
+                        &test-getForms-Dict-7
+                        &test-getForms-Dict-8
+                        &test-getForms-Dict-9
+                        &test-getForms-Dict-10
+                        &test-getForms-Getitem-1
+                        &test-getForms-Getitem-2
+                        &test-getForms-Getitem-3
+                        &test-getForms-Getitem-4
+                        &test-getForms-Getitem-5
+                        &test-getForms-Getitem-6
+                        &test-getForms-Getitem-7
+                        &test-getForms-Getitem-8
+                        &test-getForms-Getitem-9
+                        &test-getForms-Getitem-10
+                        &test-getForms-Getitem-11
+                        )}
+    }
+
+meth &test-getForms-BracketForm-1(ts==TestTranslFormBuilding) {
+    st = "~()"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(),t)
+    ts.assertEqual(forms,[~[COMMENT_TYPE,"; source line # 1"],~[FORM_TYPE,[]]])
+    }
+
+meth &test-getForms-BracketForm-2(ts==TestTranslFormBuilding) {
+    st = "~(),~()
+          ~(),~(~(),~())"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(),t)
+    ts.assertEqual(forms,[~[COMMENT_TYPE,"; source line # 1"],~[FORM_TYPE,[]],
+                          ~[COMMENT_TYPE,"; source line # 1"],~[FORM_TYPE,[]],
+                          ~[COMMENT_TYPE,"; source line # 2"],~[FORM_TYPE,[]],
+                          ~[COMMENT_TYPE,"; source line # 2"],
+                          ~[FORM_TYPE,[~[COMMENT_TYPE,"; source line # 2"],~[FORM_TYPE,[]],
+                                       ~[COMMENT_TYPE,"; source line # 2"],~[FORM_TYPE,[]]]]])
+    }
+
+meth &test-getForms-BracketForm-3(ts==TestTranslFormBuilding) {
+    st = "  ~(),~(), \\ anything to new line will be skipped
+            ~(),
+            ~(~(),~())"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(),t)
+    ts.assertEqual(forms,[~[COMMENT_TYPE,"; source line # 1"],~[FORM_TYPE,[]],
+                          ~[COMMENT_TYPE,"; source line # 1"],~[FORM_TYPE,[]],
+                          ~[COMMENT_TYPE,"; source line # 2"],~[FORM_TYPE,[]],
+                          ~[COMMENT_TYPE,"; source line # 3"],
+                          ~[FORM_TYPE,[~[COMMENT_TYPE,"; source line # 3"],~[FORM_TYPE,[]],
+                                       ~[COMMENT_TYPE,"; source line # 3"],~[FORM_TYPE,[]]]]])
+    }
+
+meth &test-getForms-BracketForm-4(ts==TestTranslFormBuilding) {
+    st = "~() ; comment here" + #\Newline + \
+         "~()" + #\Newline + \
+         "~()"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,[~[FORM_TYPE,[]],~[COMMENT_TYPE,"; comment here"],
+                          ~[FORM_TYPE,[]],~[FORM_TYPE,[]]])
+    }
+
+meth &test-getForms-BracketForm-5(ts==TestTranslFormBuilding) {
+    st = "~(a,b,c-d,~(foo))"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,[~[FORM_TYPE,[~[ATOM_TYPE,"a"],~[ATOM_TYPE,"b"],
+                                       ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_-_"],
+                                                    ~[ATOM_TYPE,"c"],~[ATOM_TYPE,"d"]]],
+                                       ~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]]]]])
+    }
+
+meth &test-getForms-OperForm-1(ts==TestTranslFormBuilding) {
+    st = "x"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,[~[ATOM_TYPE,"x"]])
+    }
+
+meth &test-getForms-OperForm-2(ts==TestTranslFormBuilding) {
+    st = "x,y"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,[~[ATOM_TYPE,"x"],~[ATOM_TYPE,"y"]])
+    }
+
+meth &test-getForms-OperForm-3(ts==TestTranslFormBuilding) {
+    st = "x
+          y"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,[~[ATOM_TYPE,"x"],~[ATOM_TYPE,"y"]])
+    }
+
+meth &test-getForms-OperForm-4(ts==TestTranslFormBuilding) {
+    st = "x y"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-OperForm-5(ts==TestTranslFormBuilding) {
+    st = "x+y"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],~[ATOM_TYPE,"y"]]]])
+    }
+
+meth &test-getForms-OperForm-6(ts==TestTranslFormBuilding) {
+    st = "x+y-z"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_-_"],
+                         ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],~[ATOM_TYPE,"y"]]],
+                         ~[ATOM_TYPE,"z"]]]])
+    }
+
+meth &test-getForms-OperForm-7(ts==TestTranslFormBuilding) {
+    st = "x+y*d"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                          ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_*_"],~[ATOM_TYPE,"y"],~[ATOM_TYPE,"d"]]]]]])
+    }
+
+meth &test-getForms-OperForm-8(ts==TestTranslFormBuilding) {
+    st = "x+'y"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],~[SHORTCUT_TYPE,"'",~[ATOM_TYPE,"y"]]]]])
+    }
+
+meth &test-getForms-OperForm-9(ts==TestTranslFormBuilding) {
+    st = "x+'$y"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                          ~[SHORTCUT_TYPE,"'",~[SHORTCUT_TYPE,",",~[ATOM_TYPE,"y"]]]]]])
+    }
+
+meth &test-getForms-OperForm-10(ts==TestTranslFormBuilding) {
+    st = "#'*"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,[~[SHORTCUT_TYPE,"#'",~[ATOM_TYPE,"tl:_*_"]]])
+    }
+
+meth &test-getForms-OperForm-11(ts==TestTranslFormBuilding) {
+    st = "a=x+y*d"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],
+                          ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                                       ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_*_"],~[ATOM_TYPE,"y"],
+                                                    ~[ATOM_TYPE,"d"]]]]]]]])
+    }
+
+meth &test-getForms-OperForm-12(ts==TestTranslFormBuilding) {
+    st = "a=x*(y+d)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_*_"],~[ATOM_TYPE,"x"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"y"],~[ATOM_TYPE,"d"]]]]]]]])
+    }
+
+meth &test-getForms-OperForm-13(ts==TestTranslFormBuilding) {
+    st = "x+y*d/c-z"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_-_"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_/_"],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_*_"],~[ATOM_TYPE,"y"],
+                                                             ~[ATOM_TYPE,"d"]]],
+                                                ~[ATOM_TYPE,"c"]]]]],
+                          ~[ATOM_TYPE,"z"]]]])
+    }
+
+meth &test-getForms-OperForm-14(ts==TestTranslFormBuilding) {
+    st = "a=x+=y=z"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+=_"],~[ATOM_TYPE,"x"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"y"],~[ATOM_TYPE,"z"]]]]]]]])
+    }
+
+meth &test-getForms-OperForm-15(ts==TestTranslFormBuilding) {
+    st = "a=x*(y+d,s)"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-OperForm-16(ts==TestTranslFormBuilding) {
+    st = "a=x*(y+d,)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_*_"],~[ATOM_TYPE,"x"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"y"],~[ATOM_TYPE,"d"]]]]]]]])
+    }
+
+meth &test-getForms-OperForm-17(ts==TestTranslFormBuilding) {
+    st = "a=x*(y+d
+                  s)"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-OperForm-18(ts==TestTranslFormBuilding) {
+    st = "a=x+y \\
+              *d"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"a"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_*_"],~[ATOM_TYPE,"y"],~[ATOM_TYPE,"d"]]]]]]]])
+    }
+
+meth &test-getForms-OperForm-19(ts==TestTranslFormBuilding) {
+    st = "x+y**d**c-z"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_-_"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_**_"],
+                                                ~[ATOM_TYPE,"y"],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_**_"],~[ATOM_TYPE,"d"],
+                                                             ~[ATOM_TYPE,"c"]]]]]]],
+                      ~[ATOM_TYPE,"z"]]]])
+    }
+
+meth &test-getForms-OperForm-20(ts==TestTranslFormBuilding) {
+    st = "x+~(foo,a+b)-z"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_-_"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"a"],
+                                                             ~[ATOM_TYPE,"b"]]]]]]],
+                      ~[ATOM_TYPE,"z"]]]])
+    }
+
+meth &test-getForms-OperForm-21(ts==TestTranslFormBuilding) {
+    st = "x++y"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_unary+_"],~[ATOM_TYPE,"y"]]]]]])
+    }
+
+meth &test-getForms-OperForm-22(ts==TestTranslFormBuilding) {
+    st = "x+-y"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_unary-_"],~[ATOM_TYPE,"y"]]]]]])
+    }
+
+meth &test-getForms-OperForm-23(ts==TestTranslFormBuilding) {
+    st = "a@b@c=x@y@z"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+          [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],
+                        ~[FORM_TYPE,[~[ATOM_TYPE,"cl:values"],~[ATOM_TYPE,"a"],
+                                     ~[ATOM_TYPE,"b"],~[ATOM_TYPE,"c"]]],
+                        ~[FORM_TYPE,[~[ATOM_TYPE,"cl:values"],~[ATOM_TYPE,"x"],
+                                     ~[ATOM_TYPE,"y"],~[ATOM_TYPE,"z"]]]]]])
+    }
+
+meth &test-getForms-OperForm-24(ts==TestTranslFormBuilding) {
+    st = "x+"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-OperForm-25(ts==TestTranslFormBuilding) {
+    st = "x+'"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-OperForm-26(ts==TestTranslFormBuilding) {
+    st = "+"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-OperForm-27(ts==TestTranslFormBuilding) {
+    st = "*"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-OperForm-28(ts==TestTranslFormBuilding) {
+    st = "not x and y or z"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_or_"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_and_"],~[FORM_TYPE,[~[ATOM_TYPE,"tl:_not_"],~[ATOM_TYPE,"x"]]],
+                                   ~[ATOM_TYPE,"y"]]],
+                      ~[ATOM_TYPE,"z"]]]])
+    }
+
+meth &test-getForms-OperForm-29(ts==TestTranslFormBuilding) {
+    st = "!x & y | z"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_or_"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_and_"],~[FORM_TYPE,[~[ATOM_TYPE,"tl:_not_"],~[ATOM_TYPE,"x"]]],
+                                   ~[ATOM_TYPE,"y"]]],
+                      ~[ATOM_TYPE,"z"]]]])
+    }
+
+meth &test-getForms-ComplexNum-1(ts==TestTranslFormBuilding) {
+    st = "x=#c(s-d,23/45)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+         [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                       ~[FORM_TYPE,[~[ATOM_TYPE,"cl:complex"],
+                                    ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_-_"],~[ATOM_TYPE,"s"],~[ATOM_TYPE,"d"]]],
+                                    ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_/_"],~[ATOM_TYPE,"23"],
+                                                 ~[ATOM_TYPE,"45"]]]]]]]])
+    }
+
+meth &test-getForms-ComplexNum-2(ts==TestTranslFormBuilding) {
+    st = "x=#c(3.4e-10,23/45)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:complex"],~[ATOM_TYPE,"3.4e-10"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_/_"],~[ATOM_TYPE,"23"],~[ATOM_TYPE,"45"]]]]]]]])
+    }
+
+meth &test-getForms-ComplexNum-3(ts==TestTranslFormBuilding) {
+    st = "x=#c(3.4e-10)"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-Array-1(ts==TestTranslFormBuilding) {
+    st = "x=[s-d,23/45,foo]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-vector_"],
+                                   ~[ATOM_TYPE,":initContent"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:list"],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_-_"],~[ATOM_TYPE,"s"],
+                                                             ~[ATOM_TYPE,"d"]]],
+                                                ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_/_"],~[ATOM_TYPE,"23"],
+                                                             ~[ATOM_TYPE,"45"]]],
+                                                ~[ATOM_TYPE,"foo"]]]]]]]])
+    }
+
+meth &test-getForms-Array-2(ts==TestTranslFormBuilding) {
+    st = "x=[]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-vector_"]]]]]])
+    }
+
+meth &test-getForms-List-1(ts==TestTranslFormBuilding) {
+    st = "x=~[s-d,23/45,foo]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:list"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_-_"],~[ATOM_TYPE,"s"],
+                                                ~[ATOM_TYPE,"d"]]],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_/_"],~[ATOM_TYPE,"23"],~[ATOM_TYPE,"45"]]],
+                                   ~[ATOM_TYPE,"foo"]]]]]])
+    }
+
+meth &test-getForms-List-2(ts==TestTranslFormBuilding) {
+    st = "x=~[]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:list"]]]]]])
+    }
+
+meth &test-getForms-BodyBlock-1(ts==TestTranslFormBuilding) {
+    st = "x=foo{a,b}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"b"]]]]]])
+    }
+
+meth &test-getForms-BodyBlock-2(ts==TestTranslFormBuilding) {
+    st = "x=foo{a
+                b=45}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"a"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"45"]]]]]]]])
+    }
+
+meth &test-getForms-BodyBlock-3(ts==TestTranslFormBuilding) {
+    st = "x=foo{}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]]]]])
+    }
+
+meth &test-getForms-BodyBlock-4(ts==TestTranslFormBuilding) {
+    st = "x=foo{a
+                b=45}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(),t)
+    ts.assertEqual(forms,
+        [~[COMMENT_TYPE,"; source line # 1"],
+         ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],
+                                   ~[COMMENT_TYPE,"; source line # 1"],~[ATOM_TYPE,"a"],
+                                   ~[COMMENT_TYPE,"; source line # 2"],
+                                   ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"45"]]]]]]]])
+    }
+
+meth &test-getForms-BodyBlock-5(ts==TestTranslFormBuilding) {
+    st = "x=foo{}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo(),t)
+    ts.assertEqual(forms,
+        [~[COMMENT_TYPE,"; source line # 1"],
+         ~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]]]]])
+    }
+
+meth &test-getForms-String-1(ts==TestTranslFormBuilding) {
+    st = " \"Hello, World!\" "
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,[~[ATOM_TYPE,"\"Hello, World!\""]])
+    }
+
+meth &test-getForms-String-2(ts==TestTranslFormBuilding) {
+    st = "x=\"Hello, \"+\"World!\" "
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"\"Hello, \""],
+                                   ~[ATOM_TYPE,"\"World!\""]]]]]])
+    }
+
+meth &test-getForms-String-3(ts==TestTranslFormBuilding) {
+    st = "x=\"Hello,
+the\"+\" brave,
+  new
+   World!\" "
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_+_"],~[ATOM_TYPE,"\"Hello,
+the\""],~[ATOM_TYPE,"\" brave,
+  new
+   World!\""]]]]]])
+    }
+
+meth &test-getForms-CLisp-1(ts==TestTranslFormBuilding) {
+    st = "x=#t{(- 1 2)#t}-3"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_-_"],~[ATOM_TYPE,"(- 1 2)"+#\Newline ],
+                                   ~[ATOM_TYPE,"3"]]]]]])
+    }
+
+meth &test-getForms-CLisp-2(ts==TestTranslFormBuilding) {
+    st = "#t{(foo) ; comment" + #\Newline + \
+         "             (boo)#t}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,[~[ATOM_TYPE,"(foo) ; comment"+#\Newline +"             (boo)"+#\Newline ]])
+    }
+
+meth &test-getForms-Column-1(ts==TestTranslFormBuilding) {
+    st = "x=:a"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[ATOM_TYPE,":a"]]]])
+    }
+
+meth &test-getForms-Column-2(ts==TestTranslFormBuilding) {
+    st = "x=::a"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[ATOM_TYPE,"::a"]]]])
+    }
+
+meth &test-getForms-Column-3(ts==TestTranslFormBuilding) {
+    st = "x= foo : a"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[ATOM_TYPE,"foo:a"]]]])
+    }
+
+meth &test-getForms-Column-4(ts==TestTranslFormBuilding) {
+    st = ":x=a"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,":x"],
+                      ~[ATOM_TYPE,"a"]]]])
+    }
+
+meth &test-getForms-Column-5(ts==TestTranslFormBuilding) {
+    st = "x=foo{}:a"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-Column-6(ts==TestTranslFormBuilding) {
+    st = "x=('foo):a"   ; have expr 'foo and expr :a - two expr together is illegal
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-Column-7(ts==TestTranslFormBuilding) {
+    st = "x='foo:a"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[SHORTCUT_TYPE,"'",~[ATOM_TYPE,"foo:a"]]]]])
+    }
+
+meth &test-getForms-ObjSlots-1(ts==TestTranslFormBuilding) {
+    st = "x.a=y.a"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:slot-value"],~[ATOM_TYPE,"x"],
+                                   ~[SHORTCUT_TYPE, "'", ~[ATOM_TYPE,"a"]]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:slot-value"],~[ATOM_TYPE,"y"],
+                                   ~[SHORTCUT_TYPE, "'", ~[ATOM_TYPE,"a"]]]]]]])
+    }
+
+meth &test-getForms-ObjSlots-2(ts==TestTranslFormBuilding) {
+    st = "x.a=\"Hi\".\\
+                     a"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:slot-value"],~[ATOM_TYPE,"x"],
+                                   ~[SHORTCUT_TYPE, "'", ~[ATOM_TYPE,"a"]]]],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:slot-value"],~[ATOM_TYPE,"\"Hi\""],
+                                   ~[SHORTCUT_TYPE, "'", ~[ATOM_TYPE,"a"]]]]]]])
+    }
+
+meth &test-getForms-ObjSlots-3(ts==TestTranslFormBuilding) {
+    st = "x.a=y.
+                a"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-ObjSlots-4(ts==TestTranslFormBuilding) {
+    st = "x.a=y
+               .a"
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-ObjMeth-1(ts==TestTranslFormBuilding) {
+    st = "x=y.foo{a,b}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"y"],~[ATOM_TYPE,"a"],
+                                   ~[ATOM_TYPE,"b"]]]]]])
+    }
+
+meth &test-getForms-ObjMeth-2(ts==TestTranslFormBuilding) {
+    st = "x=y.foo{}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"y"]]]]]])
+    }
+
+meth &test-getForms-ObjMeth-3(ts==TestTranslFormBuilding) {
+    st = "x=y.foo()"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"y"]]]]]])
+    }
+
+meth &test-getForms-ObjMeth-4(ts==TestTranslFormBuilding) {
+    st = "x=y.foo(a,b)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"y"],~[ATOM_TYPE,"a"],
+                                   ~[ATOM_TYPE,"b"]]]]]])
+    }
+
+meth &test-getForms-ObjMeth-5(ts==TestTranslFormBuilding) {
+    st = "x=y.foo(a,:b=67)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"y"],~[ATOM_TYPE,"a"],
+                                   ~[ATOM_TYPE,":b"],~[ATOM_TYPE,"67"]]]]]])
+    }
+
+meth &test-getForms-Func-1(ts==TestTranslFormBuilding) {
+    st = "x=foo{a,b}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"b"]]]]]])
+    }
+
+meth &test-getForms-Func-2(ts==TestTranslFormBuilding) {
+    st = "x=foo{}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]]]]])
+    }
+
+meth &test-getForms-Func-3(ts==TestTranslFormBuilding) {
+    st = "x=foo()"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"]]]]]])
+    }
+
+meth &test-getForms-Func-4(ts==TestTranslFormBuilding) {
+    st = "x=foo(a,b)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"b"]]]]]])
+    }
+
+meth &test-getForms-Func-5(ts==TestTranslFormBuilding) {
+    st = "x=foo(a,:b=67)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"a"],
+                                   ~[ATOM_TYPE,":b"],~[ATOM_TYPE,"67"]]]]]])
+    }
+
+meth &test-getForms-InnerFuncCallList-1(ts==TestTranslFormBuilding) {
+    st = "foo(a,b=2, .(c=3,d) e,f)"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"foo"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"b"],~[ATOM_TYPE,"2"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"c"],~[ATOM_TYPE,"3"],~[ATOM_TYPE,"d"]]],
+                      ~[ATOM_TYPE,"e"],~[ATOM_TYPE,"f"]]]])
+    }
+
+meth &test-getForms-Dict-1(ts==TestTranslFormBuilding) {
+    st = "x={}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-hash-table_"]]]]]])
+    }
+
+meth &test-getForms-Dict-2(ts==TestTranslFormBuilding) {
+    st = "x={a,b
+               c}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-hash-table_"],
+                                   ~[ATOM_TYPE,"a"],~[ATOM_TYPE,"cl:nil"],
+                                   ~[ATOM_TYPE,"b"],~[ATOM_TYPE,"cl:nil"],
+                                   ~[ATOM_TYPE,"c"],~[ATOM_TYPE,"cl:nil"]]]]]])
+    }
+
+meth &test-getForms-Dict-3(ts==TestTranslFormBuilding) {
+    st = "x={a,b->45
+             c->\"Hi\"}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-hash-table_"],
+                                   ~[ATOM_TYPE,"a"],~[ATOM_TYPE,"cl:nil"],
+                                   ~[ATOM_TYPE,"b"],~[ATOM_TYPE,"45"],
+                                   ~[ATOM_TYPE,"c"],~[ATOM_TYPE,"\"Hi\""]]]]]])
+    }
+
+meth &test-getForms-Dict-4(ts==TestTranslFormBuilding) {
+    st = "x={a
+             b->45-y}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-hash-table_"],
+                                   ~[ATOM_TYPE,"a"],~[ATOM_TYPE,"cl:nil"],
+                                   ~[ATOM_TYPE,"b"],~[FORM_TYPE,[~[ATOM_TYPE,"tl:_-_"],~[ATOM_TYPE,"45"],
+                                                                 ~[ATOM_TYPE,"y"]]]]]]]])
+    }
+
+meth &test-getForms-Dict-5(ts==TestTranslFormBuilding) {
+    st = "x={a,->45
+             c->\"Hi\"}"  ; key is missing before '->'
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-Dict-6(ts==TestTranslFormBuilding) {
+    st = "x={a,b->
+             c->\"Hi\"}"  ; value is missing after '->'
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-Dict-7(ts==TestTranslFormBuilding) {
+    st = "x={ }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-hash-table_"]]]]]])
+    }
+
+meth &test-getForms-Dict-8(ts==TestTranslFormBuilding) {
+    st = "x={"+#\Newline +" }"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-hash-table_"]]]]]])
+    }
+
+meth &test-getForms-Dict-9(ts==TestTranslFormBuilding) {
+    st = "x={a,b->45 ; comment
+             c->\"Hi\"}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-hash-table_"],
+                                   ~[ATOM_TYPE,"a"],~[ATOM_TYPE,"cl:nil"],
+                                   ~[ATOM_TYPE,"b"],~[ATOM_TYPE,"45"],
+                                   ~[ATOM_TYPE,"c"],~[ATOM_TYPE,"\"Hi\""]]]]]])
+    }
+
+meth &test-getForms-Dict-10(ts==TestTranslFormBuilding) {
+    st = "x={a ;comment
+             b->45
+             c->\"Hi\"}"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"cl:setf"],~[ATOM_TYPE,"x"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-hash-table_"],
+                                   ~[ATOM_TYPE,"a"],~[ATOM_TYPE,"cl:nil"],
+                                   ~[ATOM_TYPE,"b"],~[ATOM_TYPE,"45"],
+                                   ~[ATOM_TYPE,"c"],~[ATOM_TYPE,"\"Hi\""]]]]]])
+    }
+
+meth &test-getForms-Getitem-1(ts==TestTranslFormBuilding) {
+    st = "a[]"  ; missing any index
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-Getitem-2(ts==TestTranslFormBuilding) {
+    st = "a[->]"  ; missing any index
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-Getitem-3(ts==TestTranslFormBuilding) {
+    st = "a[->,2]"  ; missing any index
+    allElems = GrowingVect.new(:streamObj=&make-string-input-stream(st))
+    ts.assertCondition(&tl-syntax-error,getForms(allElems,makeLevelInfo()))
+    }
+
+meth &test-getForms-Getitem-4(ts==TestTranslFormBuilding) {
+    st = "a[2]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+            [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_getitem_"],~[ATOM_TYPE,"a"],~[ATOM_TYPE,"2"]]]])
+    }
+
+meth &test-getForms-Getitem-5(ts==TestTranslFormBuilding) {
+    st = "a[2->]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_getitem_"],~[ATOM_TYPE,"a"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-slice_"],~[ATOM_TYPE,"2"],
+                                   ~[ATOM_TYPE,"cl:nil"],~[ATOM_TYPE,"cl:nil"]]]]]])
+    }
+
+meth &test-getForms-Getitem-6(ts==TestTranslFormBuilding) {
+    st = "a[->2]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+         [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_getitem_"],~[ATOM_TYPE,"a"],
+                       ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-slice_"],~[ATOM_TYPE,"cl:nil"],
+                                    ~[ATOM_TYPE,"2"],~[ATOM_TYPE,"cl:nil"]]]]]])
+    }
+
+meth &test-getForms-Getitem-7(ts==TestTranslFormBuilding) {
+    st = "a[2->9]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_getitem_"],~[ATOM_TYPE,"a"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-slice_"],~[ATOM_TYPE,"2"],
+                                   ~[ATOM_TYPE,"9"],~[ATOM_TYPE,"cl:nil"]]]]]])
+    }
+
+meth &test-getForms-Getitem-8(ts==TestTranslFormBuilding) {
+    st = "a[2->9,2]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_getitem_"],~[ATOM_TYPE,"a"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-slice_"],~[ATOM_TYPE,"2"],
+                                   ~[ATOM_TYPE,"9"],~[ATOM_TYPE,"2"]]]]]])
+    }
+
+meth &test-getForms-Getitem-9(ts==TestTranslFormBuilding) {
+    st = "a[2->,2]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_getitem_"],~[ATOM_TYPE,"a"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-slice_"],~[ATOM_TYPE,"2"],
+                                   ~[ATOM_TYPE,"cl:nil"],~[ATOM_TYPE,"2"]]]]]])
+    }
+
+meth &test-getForms-Getitem-10(ts==TestTranslFormBuilding) {
+    st = "a[->9,2]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_getitem_"],~[ATOM_TYPE,"a"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"tl:_make-slice_"],~[ATOM_TYPE,"cl:nil"],
+                                   ~[ATOM_TYPE,"9"],~[ATOM_TYPE,"2"]]]]]])
+    }
+
+meth &test-getForms-Getitem-11(ts==TestTranslFormBuilding) {
+    st = "a[1,2,3,4]"
+    forms = getForms(GrowingVect.new(:streamObj=&make-string-input-stream(st)),makeLevelInfo())
+    ts.assertEqual(forms,
+        [~[FORM_TYPE,[~[ATOM_TYPE,"tl:_getitem_"],~[ATOM_TYPE,"a"],
+                      ~[FORM_TYPE,[~[ATOM_TYPE,"cl:list"],~[ATOM_TYPE,"1"],
+                                   ~[ATOM_TYPE,"2"],~[ATOM_TYPE,"3"],~[ATOM_TYPE,"4"]]]]]])
+    }
+
+
+

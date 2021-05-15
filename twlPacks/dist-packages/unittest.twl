@@ -1,0 +1,301 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+;;
+;;  This defines a default (simple) unittest pack for use in TwinLisp
+;;
+
+package unittest {
+    :nicknames {"TL-TEST"}
+    :&use {"COMMON-LISP","TWINLISP"}
+    :export {
+        ; core class to inherite from
+        "TESTCASE", "TNAME", "TFUNS"
+        ; assertion functions and macros to use in tests
+        "ASSERTTRUE", "ASSERTFALSE", "ASSERTEQUAL", "ASSERTNOTEQUAL"
+        "ASSERTCONDITION", "ASSERTNOTCONDITION", "ASSERTTHROW", "ASSERTNOTTHROW"
+        ; running tests
+        "RUNALLTESTS", "RUNONETEST", "RUNSUITES"
+        }
+    }
+
+inside "UNITTEST"
+
+class testcase {
+    tName { :initform="Tests' collection" }
+    tFuns { :initform=~[]
+            :documentation="Functions specified in this list (or vector) are run, when runAllTests is called. All functions are run one-by-one in the given order" }
+    ; the following should not be set by hand
+    tFunIndex { :initform=0
+                :documentation="This is an index of currenly running tFun" }
+    tFunResult { :documentation="This is a result object for a currently running tFun" }
+    allResults { :initform=[]
+                 :documentation="Contains testResult struct's for each test run. Index of the result correponds that of a function in tFuns" }
+    }
+
+struct testResult {
+    state { :running, :type=symbol }  ; expected values are :running, :pass, :fail and :error
+    assertions { [] }    ; contains assertResult struct's for each assertion performed in the test
+    testIndex { 0, :type=integer }
+    testName
+    runTime { 0, :type=float }
+    errorObj { nil }
+    }
+
+struct assertResult {
+    state { :dummy_symbol, :type=symbol}   ; expected values are :pass and :fail
+    textOnFail { nil }
+    tag   ; tag can be any printable value, if nil, it is not printed
+    failMessage { nil }
+    }
+
+def &record-assertion-pass (ts,tag) {
+    ts.tFunResult.assertions.append(assertResult.new(:state=:pass,:tag=tag)) }
+
+def &record-assertion-fail (ts,textOnFail,tag,failMessage) {
+    ts.tFunResult.assertions.append(assertResult.new(:state=:fail,:tag=tag
+                        :textOnFail=textOnFail,:failMessage=failMessage)) }
+
+defgen setUp (ts)
+    meth (ts==testcase) {}
+
+defgen tearDown (ts)
+    meth (ts==testcase) {}
+
+def assertEqual (ts,lhs,rhs, :test->testFun=#'==,
+                 :textOnFail->textOnFail=nil, :tag->tag=nil) {
+    if (testFun.funcall(lhs,rhs)) { &record-assertion-pass(ts,tag)}
+    else { &record-assertion-fail(ts,textOnFail,tag
+               "   '~A' is not equal to '~A'" % [lhs,rhs]) }}
+
+def assertNotEqual (ts,lhs,rhs, :test->testFun=#'==,
+                 :textOnFail->textOnFail=nil, :tag->tag=nil) {
+    if (not testFun.funcall(lhs,rhs)) { &record-assertion-pass(ts,tag)}
+    else { &record-assertion-fail(ts,textOnFail,tag
+               "   '~A' is equal to '~A'" % [lhs,rhs]) }}
+
+def assertTrue (ts,statement, :textOnFail->textOnFail=nil, :tag->tag=nil) {
+    if (statement) { &record-assertion-pass(ts,tag)}
+    else { &record-assertion-fail(ts,textOnFail,tag,nil) }}
+
+def assertFalse (ts,statement, :textOnFail->textOnFail=nil, :tag->tag=nil) {
+    if (not statement) { &record-assertion-pass(ts,tag)}
+    else { &record-assertion-fail(ts,textOnFail,tag,nil) }}
+
+mac assertCondition (ts,expectedCondition,statement,
+                     :textOnFail->textOnFail=nil, :tag->tag=nil) {
+    `handle {
+        $statement
+        &record-assertion-fail($ts,$textOnFail,$tag
+                               "   Condition '~A' wasn't signaled" % '$expectedCondition) }
+    cond $expectedCondition {
+        &record-assertion-pass($ts,$tag) }}
+
+mac assertNotCondition (ts,expectedCondition,statement,
+                        :textOnFail->textOnFail=nil, :tag->tag=nil) {
+    `handle {
+        $statement
+        &record-assertion-pass ($ts,$tag)}
+    cond $expectedCondition {
+        &record-assertion-fail($ts,$textOnFail,$tag
+                               "   Condition '~A' was signaled" % '$expectedCondition)}}
+
+mac assertThrow (ts,thrownObj,statement,
+                 :textOnFail->textOnFail=nil, :tag->tag=nil) {
+    let (isThrown=gensym()) {
+        `let ($isThrown=t) {
+            catch $thrownObj {
+                $statement
+                $isThrown=nil}
+            if ($isThrown) { &record-assertion-pass ($ts,$tag) }
+            else { &inner-record-result($ts,$textOnFail,$tag
+                                        "   Object '~A' wasn't thrown" % $thrownObj) }}}}
+
+mac assertNotThrow (ts,thrownObj,statement,
+                    :textOnFail->textOnFail=nil, :tag->tag=nil) {
+    let (isThrown=gensym()) {
+        `let ($isThrown=t) {
+            catch $thrownObj {
+                $statement
+                $isThrown=nil}
+            if ($isThrown) { &inner-record-result($ts,$textOnFail,$tag
+                                                  "   Object '~A' was thrown" % $thrownObj) }
+            else { &record-assertion-pass ($ts,$tag) }}}}
+
+def &inner-one-test-run(ts,testFun,testIndex=nil) {
+    ts.tFunResult = testResult.new(:testIndex=testIndex
+                                   :testName=("~A" % testFun))
+    ts.setUp()
+    startTime = &get-internal-real-time()
+    testFun.funcall(ts)
+    endTime = &get-internal-real-time()
+    ts.tearDown()
+    ts.tFunResult.runTime = ((endTime-startTime)/&INTERNAL-TIME-UNITS-PER-SECOND).coerce('float)
+    ts.tFunResult.state = do (i=0->i+1)
+                              (i>=ts.tFunResult.assertions.len()
+                               :pass) {
+                               if (ts.tFunResult.assertions[i].state==:fail) {
+                                   break :fail }}}
+
+mac &logging-errors(ts,**body) {
+    `handle {
+        $@body }
+    cond error (errObj) {
+        ($ts).tFunResult.errorObj = errObj
+        ($ts).tFunResult.state = :error }}
+
+def &print-test-result-assertions(res,streamOut) {
+    &write-line("Assertions:",streamOut)
+    dos (i=0->i+1, outLine=("  #~D " % i)->("  #~D " % i)
+         innerRes=nil)
+        (i>=res.assertions.len()) {
+        innerRes = res.assertions[i]
+        if (innerRes.tag) { outLine += "tag='~A' " % innerRes.tag }
+        outLine += "... ~A" % innerRes.state
+        &write-line(outLine,streamOut)
+        if (innerRes.state==:fail) {
+            if (innerRes.textOnFail) { &write-line(innerRes.textOnFail,streamOut) }
+            if (innerRes.failMessage) {&write-line(innerRes.failMessage,streamOut) }}}}
+
+def &print-single-test-result(res,streamOut) {
+    outLine = "Test "
+    if (res.testIndex) { outLine += "#~D " % res.testIndex }
+    outLine += "'~A' ... ~A" % [res.testName,res.state]
+    &write-line(outLine,streamOut)
+    &write-line("running time is ~D seconds" % res.runTime,streamOut)
+    comcase (res.state)
+    is (:pass) { &print-test-result-assertions(res,streamOut) }
+    is (:fail) { &print-test-result-assertions(res,streamOut) }
+    is (:error) {
+        &print-test-result-assertions(res,streamOut)  ; assertions before error
+        &write-line("Error occured:",streamOut)
+        &write-line("  ~A" % res.errorObj,streamOut) }
+    is (:running) {
+        error("function unittest:&print-single-test-result should not be called while test is running") }}
+
+meth runOneTest (className==symbol, index==integer
+                 :stream->streamOut=&*standard-output*, :debug->debug=t) {
+    ts = &make-instance(className)
+    if (debug) {
+        &inner-one-test-run(ts,ts.tFuns[index]) }
+    else {
+        &logging-errors(ts) {
+            &inner-one-test-run(ts,ts.tFuns[index]) }}
+    &print-single-test-result(ts.tFunResult,streamOut)
+    ts}
+
+meth runOneTest (className==symbol, testFun==symbol
+                 :stream->streamOut=&*standard-output*, :debug->debug=t) {
+    ts = &make-instance(className)
+    if (debug) {
+        &inner-one-test-run(ts,testFun) }
+    else {
+        &logging-errors(ts) {
+            &inner-one-test-run(ts,testFun) }}
+    &print-single-test-result(ts.tFunResult,streamOut)
+    ts}
+
+def &inner-testsuite-run (ts,verbosity,streamOut,startTestIndex=0) {
+    do (funList=ts.tFuns->funList.cdr(), i=startTestIndex->i+1)
+        (endp(funList)) {
+        &logging-errors(ts) {
+            &inner-one-test-run(ts,funList.car(),i) }
+        ts.allResults.append(ts.tFunResult)
+        ;; print info while running
+        if (verbosity==1) {
+            comcase (ts.tFunResult.state)
+            is (:pass) { &write-string(".",streamOut) }
+            is (:fail) { &write-string("F",streamOut) }
+            is (:error) { &write-string("E",streamOut) }}
+        elif (verbosity==2) {
+            outLine = "test "
+            if (ts.tFunResult.testIndex) { outLine += "#~D " % ts.tFunResult.testIndex }
+            outLine += "'~A' ... ~A" % [ts.tFunResult.testName,ts.tFunResult.state]
+            &write-line(outLine,streamOut) }
+        elif (verbosity>=3) {
+            &print-single-test-result(ts.tFunResult,streamOut) }}}
+
+meth runAllTests (className==symbol
+                 :verbosity->verbosity=1, :stream->streamOut=&*standard-output*) {
+    ts = &make-instance(className)
+    &write-line("~%Running test suite '~A'" % ts.tName,streamOut)
+    &inner-testsuite-run(ts,verbosity,streamOut)
+    ;; printing details about failed or erred tests
+    numTestFailed = 0
+    totalTime = 0.0
+    if (verbosity>=3) {
+        for (testRes,ts.allResults) {
+            totalTime += testRes.runTime
+            if ((testRes.state==:fail) or (testRes.state==:error)) {
+                numTestFailed += 1 }}}
+    else {
+        &write-line("~%Summary for test suite '~A':" % ts.tName,streamOut)
+        for (testRes,ts.allResults) {
+            totalTime += testRes.runTime
+            if ((testRes.state==:fail) or (testRes.state==:error)) {
+                numTestFailed += 1
+                &print-single-test-result(testRes,streamOut) }}}
+    &write-line("run ~D of ~D tests in ~D seconds" % ~[ts.allResults.len(),ts.tFuns.len(),totalTime]
+                streamOut)
+    if (numTestFailed==0) {
+        &write-line("PASSED test suite '~A'" % ts.tName,streamOut)}
+    else {
+        &write-line("FAILED test suite '~A':" % ts.tName,streamOut)
+        &write-line("  ~D of ~D run tests failed or erred" % ~[numTestFailed,ts.allResults.len()],streamOut)}
+    ts}
+
+def runSuites(testSuites
+              :verbosity->verbosity=1, :stream->streamOut=&*standard-output*) {
+    suites = for (ts,testSuites,suites=[])
+                 (suites) {
+                 if (ts.typep('symbol)) { suites.append(&make-instance(ts)) }
+                 elif (ts.typep('testcase)) { suites.append(ts) }
+                 else { error("Object '~A', given to unittest:runSuites, is neither a symbol, nor a testcase" % ~[ts]) }}
+    &write-line("")
+    for (ts,suites) {
+        &inner-testsuite-run(ts,verbosity,streamOut) }
+    ;; printing details about failed or erred tests
+    numTestRun = 0
+    numTestFailed = 0
+    totalNumFuns = 0
+    totalTime = 0.0
+    for (ts,suites) {
+        if (verbosity>=3) {
+            for (testRes,ts.allResults) {
+                totalTime += testRes.runTime
+                if ((testRes.state==:fail) or (testRes.state==:error)) {
+                    numTestFailed += 1 }}}
+        else {
+            for (testRes,ts.allResults) {
+                totalTime += testRes.runTime
+                if ((testRes.state==:fail) or (testRes.state==:error)) {
+                    numTestFailed += 1
+                    &write-line("~%In test suite '~A':" % ts.tName,streamOut)
+                    &print-single-test-result(testRes,streamOut) }}}
+        numTestRun += ts.allResults.len()
+        totalNumFuns += ts.tFuns.len()
+        }
+    &write-line("~%run ~D of ~D tests in ~D seconds" % ~[numTestRun,totalNumFuns,totalTime]
+                streamOut)
+    if (numTestFailed==0) {
+        &write-line("PASSED all test suites")}
+    else {
+        &write-line("FAILED:",streamOut)
+        &write-line("  ~D of ~D run tests failed or erred" % ~[numTestFailed,numTestRun],streamOut)}
+    suites}
+

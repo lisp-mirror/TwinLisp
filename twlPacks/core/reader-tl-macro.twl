@@ -1,0 +1,60 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+inside "TWINLISP"
+
+def &read-tl-code(inStream,firstChar,arg) {
+    declare(ignore(arg))
+    if (firstChar!=#\t) { return values() }
+    if (inStream.&read-char()!=#\{) { return values() }
+    charBuff = &make-string-output-stream()
+    innerSyntChangeLevels = 1
+    handle {
+        do (char=inStream.&read-char()->inStream.&read-char()) {
+            if (char==#\#) {
+                char = inStream.&read-char()
+                if (char==#\t) {
+                    char = inStream.&read-char()
+                    if (char==#\{) {
+                        innerSyntChangeLevels += 1
+                        charBuff << #\# << #\t << #\{ }
+                    elif (char==#\}) {
+                        innerSyntChangeLevels -= 1
+                        if (innerSyntChangeLevels==0) { break }
+                        else { charBuff << #\# << #\t << #\} }}
+                    else { charBuff << #\# << #\t << char }}
+                else { charBuff << #\# << char }}
+            else { charBuff << char }}}
+    cond &end-of-file {
+        error(&end-of-file .new(:stream = inStream
+                                :&format-string = "~S: input stream ~S ends within tl code block"+#\Newline
+                                :&format-arguments = ~['&read-tl-code,inStream])) }
+    twInStream = &make-string-input-stream(charBuff.&get-output-stream-string())
+    lispCodeBuff = &make-string-output-stream()
+    &translate-streams(twInStream,lispCodeBuff)
+    lispInStream = &make-string-input-stream(lispCodeBuff.&get-output-stream-string())
+    forms = []
+    handle {
+        do () { forms.append(lispInStream.read()) }}
+    cond &end-of-file {}  ; this is just a point of a control transfer
+    cons('progn,forms.coerce('list)) }
+
+
+&set-dispatch-macro-character(#\#,#\t,#'&read-tl-code)
+

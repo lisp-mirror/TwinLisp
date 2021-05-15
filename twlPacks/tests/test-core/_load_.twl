@@ -1,0 +1,57 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+require("unittest")
+
+cout() << #\Newline << "Testing TwinLisp's core components:" << #\Newline
+
+; testcases defined in the current pack
+require("TestOperMeths")
+require("TestContainerMeths")
+require("TestOtherMacs")
+
+; testcases defined in TwinLisp pack
+require("TestTranslStringReading")
+require("TestTranslElemSearchFuncs")
+require("TestTranslFormBuilding")
+require("TestTranslFormBuildingTwo")
+require("TestTranslFormBuildingThree")
+require("TestTranslFormBuildingFour")
+require("TestTranslFormWritting")
+; this will let us reach tests defined in TwinLisp pack
+use TWINLISP: { TestTranslStringReading
+                TestTranslElemSearchFuncs
+                TestTranslFormBuilding
+                TestTranslFormBuildingTwo
+                TestTranslFormBuildingThree
+                TestTranslFormBuildingFour
+                TestTranslFormWritting}
+
+unittest:runSuites('~(TestOperMeths
+                      TestContainerMeths
+                      TestOtherMacs
+                      TestTranslStringReading
+                      TestTranslElemSearchFuncs
+                      TestTranslFormBuilding
+                      TestTranslFormBuildingTwo
+                      TestTranslFormBuildingThree
+                      TestTranslFormBuildingFour
+                      TestTranslFormWritting)
+                   :verbosity=1)
+
+

@@ -1,0 +1,339 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+;;
+;;   constants
+;;
+
+inside "TWINLISP"
+
+; Common Lisp package name with a colomn to attach to names
+const( CL_PACK = "cl:" )
+const( CLOS_PACK = "clos:" )  ; some symbols sometimes come from clos
+
+; TwinLisp package name with a colomn to attach to names
+const( TL_PACK = "tl:" )
+
+; BRACKETS describes enclosing symbols (brackets): key is an openning 'bracket', value is a closing one
+const( BRACKETS = {"(" -> ")"
+                   "[" -> "]"
+                   "{" -> "}"
+                   "~(" -> ")"
+                   "~[" -> "]"} )
+const( CLOSING_BRACKETS = BRACKETS.tValues() )
+
+; types of operator association
+const( RIGHT_ASSOC = :right_assoc )
+const( LEFT_ASSOC = :left_assoc )
+const( MULT_ARGS_ASSOC = :mult_assoc )
+
+const( UNAR_OPERS = {"+" -> ~[TL_PACK+"_unary+_",2,RIGHT_ASSOC]
+                     "-" -> ~[TL_PACK+"_unary-_",2,RIGHT_ASSOC]
+                     "!" -> ~[TL_PACK+"_not_",2,RIGHT_ASSOC]
+                     "not" -> ~[TL_PACK+"_not_",2,RIGHT_ASSOC]} )
+
+const( BIN_OPERS = {"**" -> ~[TL_PACK+"_**_",3,RIGHT_ASSOC]
+                    "*" -> ~[TL_PACK+"_*_",4,LEFT_ASSOC]
+                    "/" -> ~[TL_PACK+"_/_",4,LEFT_ASSOC]
+                    "%" -> ~[TL_PACK+"_%_",4,LEFT_ASSOC]
+                    "+" -> ~[TL_PACK+"_+_",5,LEFT_ASSOC]
+                    "-" -> ~[TL_PACK+"_-_",5,LEFT_ASSOC]
+                    "<" -> ~[TL_PACK+"_<_",7,LEFT_ASSOC]
+                    ">" -> ~[TL_PACK+"_>_",7,LEFT_ASSOC]
+                    "<=" -> ~[TL_PACK+"_<=_",7,LEFT_ASSOC]
+                    ">=" -> ~[TL_PACK+"_>=_",7,LEFT_ASSOC]
+                    "==" -> ~[TL_PACK+"_==_",8,LEFT_ASSOC]
+                    "!=" -> ~[TL_PACK+"_!=_",8,LEFT_ASSOC]
+                    "&" -> ~[TL_PACK+"_and_",9,LEFT_ASSOC]
+                    "and" -> ~[TL_PACK+"_and_",9,LEFT_ASSOC]
+                    "^" -> ~[TL_PACK+"_xor_",10,LEFT_ASSOC]
+                    "xor" -> ~[TL_PACK+"_xor_",10,LEFT_ASSOC]
+                    "|" -> ~[TL_PACK+"_or_",11,LEFT_ASSOC]
+                    "or" -> ~[TL_PACK+"_or_",11,LEFT_ASSOC]
+                    "<<" -> ~[TL_PACK+"_<<_",13,LEFT_ASSOC]
+                    "@" -> ~[CL_PACK+"values",14,MULT_ARGS_ASSOC]
+                    "=" -> ~[CL_PACK+"setf",15,RIGHT_ASSOC]
+                    "+=" -> ~[TL_PACK+"_+=_",15,RIGHT_ASSOC]
+                    "-=" -> ~[TL_PACK+"_-=_",15,RIGHT_ASSOC]
+                    "*=" -> ~[TL_PACK+"_*=_",15,RIGHT_ASSOC]
+                    "/=" -> ~[TL_PACK+"_/=_",15,RIGHT_ASSOC]} )
+
+const( OPER_SYMB = ~["and","or","xor","not"] )    ; "word" operator, not a block structure
+
+const( SHORTCUT_OPERS = {"'" -> "'"
+                         "#." -> "#."
+                         "#'" -> "#'"
+                         "`" -> "`"
+                         "$" -> ","
+                         "$@" -> ",@"} )
+
+const( COMPL_NUM_OPER = ~["#C","#c"] )
+
+; TwinLisp's names of funcs/methods
+const( MAKE_SIMPLE_ARRAY_FUNC = TL_PACK+"_make-vector_" )
+const( MAKE_LIST_FUNC = CL_PACK+"list" )
+const( MAKE_COMPLEX_NUM_FUNC = CL_PACK+"complex" )
+const( MAKE_DICTIONARY_FUNC = TL_PACK+"_make-hash-table_" )
+const( GET_ITEM_FUNC = TL_PACK+"_getitem_" )
+const( MAKE_SLICE_FUNC = TL_PACK+"_make-slice_" )
+const( GET_OBJ_SLOT_FUNC = CL_PACK+"slot-value" )
+const( LISP_NIL = CL_PACK+"nil" )
+const( LISP_T = CL_PACK+"t" )
+const( LISP_LET = CL_PACK+"let" )
+const( LISP_PROGN = CL_PACK+"progn" )
+const( SETTER_FUNC = CL_PACK+"setf" )
+
+; Nicknames to "popular" methods
+const( TWL_METH_NICKNAMES = {"t" -> LISP_T
+                             "nil" -> LISP_NIL
+                             "progn" -> LISP_PROGN
+                             "tagbody" -> CL_PACK+"tagbody"
+                             "pop" -> "tl-pop"
+                             "_pop" -> CL_PACK+"pop"
+                             "remove" -> "tl-remove"
+                             "_remove" -> CL_PACK+"remove"
+                             "append" -> "tl-append"
+                             "_append" -> CL_PACK+"append"
+                             "count" -> "tl-count"
+                             "_count" -> CL_PACK+"count"
+                             "load" -> "tl-load"
+                             "_load" -> CL_PACK+"load"
+                             "require" -> "tl-require"
+                             "_require" -> CL_PACK+"require"
+                             "times" -> "tl-times"
+                             "_times" -> CL_PACK+"times"} )
+
+; DOUBLE_CHAR_OPERS is used in string reading to mark elements
+const( MULTI_CHAR_OPERS = \
+        flet appTable (mTab,opTab) {
+                 dos (i=0->i+1, items=opTab.tItems())
+                     (i>=items.len()) {
+                     oper = items[i].first()
+                     if ((OPER_SYMB.count(oper)==0) and (oper.len()>1)) {
+                         if (mTab.has_key(oper[0])) { mTab[oper[0]].append(oper) }
+                         else { mTab[oper[0]] = ~[oper] }}}}
+             addOper (mTab,opers) {
+                 dos (i=0->i+1) (i>=opers.len()) {
+                     oper=opers[i]
+                     if (mTab.has_key(oper[0])) { mTab[oper[0]].append(oper) }
+                     else { mTab[oper[0]] = ~[oper] }}}
+            {multOpers={}
+             appTable(multOpers,UNAR_OPERS)
+             appTable(multOpers,BIN_OPERS)
+             appTable(multOpers,SHORTCUT_OPERS)
+             addOper(multOpers,COMPL_NUM_OPER)
+             addOper(multOpers,~["~(","~[","->","::","=?"])
+             multOpers} )
+
+; types of elements extracted from string
+const( SYMB_ELEM = :symbol_elem )
+const( SPEC_SYMB_ELEM = :spec_symbol_elem )
+const( NUM_ELEM = :number_elem )
+const( SYNT_STRUCT_ELEM = :syntactic_structure )
+const( STR_START_ELEM = :string_start_elem )
+const( STR_MID_ELEM = :string_middle_elem )
+const( STR_END_ELEM = :string_end_elem )
+const( CLISP_START_ELEM = :clisp_code_start_elem )
+const( CLISP_MID_ELEM = :clisp_code_middle_elem )
+const( CLISP_END_ELEM = :clisp_code_end_elem )
+const( WHITE_ELEM = :white_space_elem )
+const( COMM_ELEM = :comment_elem )
+const( LINE_END_ELEM = :end_of_line_elem )
+
+struct StrElem { type, value, lineNum, start, end }
+
+; AUX_SPEC_SYMB is a list of special words that might be used inside of TL_BLOCK's or TL's directives
+const( AUX_SPEC_SYMB = ~["elif", "else","from","is","options"
+                         "finally","at","cond","meth"] )
+const( SETTER_SPEC_SYMB = "setter" )
+AUX_SPEC_SYMB.append(SETTER_SPEC_SYMB)
+
+; TL_DIRECT_SPEC_SYMB is a list of special words that start TL's directives
+const( TL_DIR_GLOBAL = "global" )
+const( TL_DIR_LEXSCOPE = "lexscope" )
+const( TL_EXPL_SCOPE = "explicit" )
+const( TL_IMPL_SCOPE = "implicit" )
+const( TL_DIR_USE = "use" )
+const( TL_DIRECT_SPEC_SYMB = ~[TL_DIR_GLOBAL, TL_DIR_LEXSCOPE, TL_EXPL_SCOPE, TL_IMPL_SCOPE, TL_DIR_USE] )
+
+; TYPE's are types of nodes ready for writting 'em directly into lisp code
+const( COMMENT_TYPE = :comment_type )
+const( SHORTCUT_TYPE = :shortcut_type )
+const( ATOM_TYPE = :atom_type )
+const( FORM_TYPE = :form_type )
+
+; constants for use in TL_BLOCK descriptions and/or in functions that work with elements from TL_BLOCK's
+const( OPTIONAL = :optional_element )
+const( MULT = :repeat_several_times )
+const( LAMBDA_LIST_OPTIONS = ~["&optional","&rest","&key","&allow-other-keys","&aux"] )
+const( MAC_LAMBDA_LIST_OPTIONS = LAMBDA_LIST_OPTIONS + ~["&body","&whole","&environment"] )
+const( FUN_NAME = :function_name )    ; one form
+const( GEN_FUN_NAME = :generic_function_name )    ; one form
+const( NAME = :name_on_current_line )   ; one form
+const( NAME2 = :name_on_diff_line )   ; one form
+const( FUN_NAME_FROM_LEVEL = :func_name_from_level_info )   ; one form
+const( LAMBDA_LIST = :lambda_list ) ; one form
+const( MAC_LAMBDA_LIST = :macro_lambda_list )   ; one form
+const( SPEC_LAMBDA_LIST = :specializer_lambda_list )   ; one form
+const( LET_LIST = :let_list )   ; one form
+const( DO_VAR_LIST = :do_vars_list )    ; one form
+const( DO_TEST_RES_LIST = :do_test_result_list )    ; one form
+const( BODY_BLOCK = :body_block )   ; many forms
+const( LAMBDA_BODY_BLOCK = :lambda_body_block )   ; many forms
+const( MAC_BODY_BLOCK = :mac_body_block )   ; many forms
+const( FUN_BODY_BLOCK = :func_body_block )   ; many forms
+const( GEN_FUN_METH_BODY_BLOCK = :generic_func_method_body_block )   ; many forms
+const( OPER_EXPR = :oper_expr )   ; one form
+const( OPER_EXPR_IN_BRACK = :oper_expr_in_round_brackets )   ; one form
+const( MULT_OPER_EXPR_IN_BRACK = :mult_oper_expr_in_round_brackets )   ; one form
+const( STRUCT_SLOTS = :struct_slots_defs )
+const( STRUCT_OPTIONS = :struct_options )
+const( CLASS_SLOTS_LIST = :class_slots_defs_list )
+const( CLASS_OPTIONS = :class_options )
+const( METH_QUALIF = :meth_qualifier )
+; TL_BLOCK gives descriptions of each special TwinLisp language constract;
+;  - keys are special words that start their respective TL_BLOCK's
+const( TL_BLOCK = {"def" -> ~[[FUN_NAME, ~[LAMBDA_LIST, OPTIONAL], FUN_BODY_BLOCK]
+                              [CL_PACK+"defun",0,1,2]]
+                   "lambda" -> ~[[~[LAMBDA_LIST, OPTIONAL], LAMBDA_BODY_BLOCK]
+                                 [CL_PACK+"lambda",0,1]]
+                   "mac" -> ~[[NAME2, ~[MAC_LAMBDA_LIST, OPTIONAL], MAC_BODY_BLOCK]
+                              [CL_PACK+"defmacro",0,1,2]]
+                   "block" -> ~[[~[NAME2, OPTIONAL], BODY_BLOCK]
+                                [CL_PACK+"block",0,1]]
+                   "catch" -> ~[[NAME2, BODY_BLOCK]
+                                [CL_PACK+"catch",0,1]]
+                   "throw" -> ~[[NAME, ~[OPER_EXPR, OPTIONAL]]
+                                [CL_PACK+"throw",0,1]]
+                   "let" -> ~[[~[LET_LIST, OPTIONAL], BODY_BLOCK]
+                              [CL_PACK+"let",0,1]]
+                   "lets" -> ~[[~[LET_LIST, OPTIONAL], BODY_BLOCK]
+                               [CL_PACK+"let*",0,1]]
+                   "prog" -> ~[[~[LET_LIST, OPTIONAL], BODY_BLOCK]
+                               [CL_PACK+"prog",0,1]]
+                   "progs" -> ~[[~[LET_LIST, OPTIONAL], BODY_BLOCK]
+                                [CL_PACK+"prog*",0,1]]
+                   "do" -> ~[[DO_VAR_LIST, ~[DO_TEST_RES_LIST, OPTIONAL], BODY_BLOCK]
+                             [CL_PACK+"do",0,1,2]]
+                   "dos" -> ~[[DO_VAR_LIST, ~[DO_TEST_RES_LIST, OPTIONAL], BODY_BLOCK]
+                              [CL_PACK+"do*",0,1,2]]
+                   "for" -> ~[[DO_VAR_LIST, ~[DO_TEST_RES_LIST, OPTIONAL], BODY_BLOCK]
+                              [TL_PACK+"tl-for",0,1,2]]
+                   "times" -> ~[[DO_VAR_LIST, ~[DO_TEST_RES_LIST, OPTIONAL], BODY_BLOCK]
+                               [TL_PACK+"tl-times",0,1,2]]
+                   "flet" -> ~[[~[[FUN_NAME, ~[LAMBDA_LIST, OPTIONAL], FUN_BODY_BLOCK]
+                                  OPTIONAL, MULT], BODY_BLOCK]
+                                  [CL_PACK+"flet",[~[0,OPTIONAL,MULT,[0,1,2]]],1]]
+                   "labels" -> ~[[~[[FUN_NAME, ~[LAMBDA_LIST, OPTIONAL], FUN_BODY_BLOCK]
+                                    OPTIONAL, MULT], BODY_BLOCK]
+                                 [CL_PACK+"labels",[~[0,OPTIONAL,MULT,[0,1,2]]],1]]
+                   "maclet" -> ~[[~[[NAME2, ~[MAC_LAMBDA_LIST, OPTIONAL], MAC_BODY_BLOCK]
+                                    OPTIONAL, MULT], MAC_BODY_BLOCK]
+                                 [CL_PACK+"macrolet",[~[0,OPTIONAL,MULT,[0,1,2]]],1]]
+                   "if" -> ~[[OPER_EXPR_IN_BRACK, BODY_BLOCK
+                              ~[["elif", OPER_EXPR_IN_BRACK, BODY_BLOCK], OPTIONAL, MULT]
+                              ~[["else", BODY_BLOCK], OPTIONAL]]
+                             [CL_PACK+"cond",[0,1],~[2,MULT,OPTIONAL,[0,1]],~[3,OPTIONAL,[LISP_T,0]]]]
+                   "case" -> ~[[OPER_EXPR_IN_BRACK
+                                ~[["is", MULT_OPER_EXPR_IN_BRACK, BODY_BLOCK], OPTIONAL, MULT]
+                                ~[["else", BODY_BLOCK], OPTIONAL]]
+                               [TL_PACK+"tl-case",0,~[2,OPTIONAL,[0],LISP_NIL],~[1,MULT,OPTIONAL,[[0],1]]]]
+                   "comcase" -> ~[[OPER_EXPR_IN_BRACK
+                                   ~[["is", MULT_OPER_EXPR_IN_BRACK, BODY_BLOCK], OPTIONAL, MULT]
+                                   ~[["else", BODY_BLOCK], OPTIONAL]]
+                                  [CL_PACK+"case",0,~[1,MULT,OPTIONAL,[[0],1]],
+                                   ~[2,OPTIONAL,[CL_PACK+"otherwise",0]]]]
+                   "typecase" -> ~[[OPER_EXPR_IN_BRACK
+                                    ~[["is", OPER_EXPR_IN_BRACK, BODY_BLOCK], OPTIONAL, MULT]]
+                                   [CL_PACK+"typecase",0,~[1,MULT,OPTIONAL,[0,1]]]]
+                   "return" -> ~[[FUN_NAME_FROM_LEVEL, ~[["from", NAME], OPTIONAL]
+                                  ~[OPER_EXPR, OPTIONAL]]
+                                 [CL_PACK+"return-from",~[1,OPTIONAL,0,0],2]]
+                   "break" -> ~[[~[["from", NAME], OPTIONAL], ~[OPER_EXPR, OPTIONAL]]
+                                [CL_PACK+"return-from",~[0,OPTIONAL,0,LISP_NIL],1]]
+                   "struct" -> ~[[NAME2, STRUCT_SLOTS, ~[["options", STRUCT_OPTIONS], OPTIONAL]]
+                                 [CL_PACK+"defstruct",[0,~[2,OPTIONAL,0]],1]]
+                   "class" -> ~[[NAME2, ~[LET_LIST, OPTIONAL], CLASS_SLOTS_LIST
+                                 ~[["options", CLASS_OPTIONS], OPTIONAL]]
+                                [CL_PACK+"defclass",0,1,2,~[3,OPTIONAL,0]]]
+                   "cond" -> ~[[NAME2, ~[LET_LIST, OPTIONAL], CLASS_SLOTS_LIST
+                                ~[["options", CLASS_OPTIONS], OPTIONAL]]
+                               [CL_PACK+"define-condition",0,1,2,~[3,OPTIONAL,0]]]
+                   "meth" -> ~[[FUN_NAME, ~[METH_QUALIF, OPTIONAL], SPEC_LAMBDA_LIST
+                                FUN_BODY_BLOCK]
+                               [CL_PACK+"defmethod",0,1,2,3]]
+                   "package" -> ~[[NAME2, ~[STRUCT_SLOTS, OPTIONAL]]
+                                  [CL_PACK+"defpackage",0,1]]
+                   "inside" -> ~[[OPER_EXPR]
+                                 [CL_PACK+"in-package",0]]
+                   "try" -> ~[[BODY_BLOCK, ["finally", BODY_BLOCK]]
+                              [CL_PACK+"unwind-protect",[LISP_PROGN,0],~[1,0]]]
+                   "restart" -> ~[[BODY_BLOCK, ~[["at", ~[NAME2, OPTIONAL], ~[LAMBDA_LIST, OPTIONAL]
+                                                  BODY_BLOCK], OPTIONAL, MULT]]
+                                  [CL_PACK+"restart-case",[LISP_PROGN,0],~[1,MULT,OPTIONAL,[0,1,2]]]]
+                   "handle" -> ~[[BODY_BLOCK
+                                  ~[["cond", NAME2, ~[LET_LIST, OPTIONAL], BODY_BLOCK], OPTIONAL, MULT]
+                                  ~[["else", LAMBDA_LIST, BODY_BLOCK], OPTIONAL]]
+                                 [CL_PACK+"handler-case",[LISP_PROGN,0],~[1,MULT,OPTIONAL,[0,1,2]]
+                                  ~[2,OPTIONAL,[":no-error",0,1]]]]
+                   "hbind" -> ~[[BODY_BLOCK, ~[["cond", NAME2, OPER_EXPR], OPTIONAL, MULT]]
+                                [CL_PACK+"handler-bind",[~[1,MULT,OPTIONAL,[0,1]]],0]]
+                   "defgen" -> ~[[GEN_FUN_NAME, LAMBDA_LIST
+                                  ~[["options", CLASS_OPTIONS], OPTIONAL]
+                                  ~[["meth", ~[METH_QUALIF, OPTIONAL], SPEC_LAMBDA_LIST
+                                     GEN_FUN_METH_BODY_BLOCK], OPTIONAL, MULT]]
+                                 [CL_PACK+"defgeneric",0,1,~[2,OPTIONAL,0],
+                                  ~[3,MULT,OPTIONAL,[":method",0,1,2]]]]
+                   "glet" -> ~[[~[[GEN_FUN_NAME, LAMBDA_LIST
+                                   ~[["options", CLASS_OPTIONS], OPTIONAL]
+                                   ~[["meth", ~[METH_QUALIF, OPTIONAL], SPEC_LAMBDA_LIST
+                                      GEN_FUN_METH_BODY_BLOCK], OPTIONAL, MULT]], OPTIONAL, MULT]
+                                BODY_BLOCK]
+                               [CLOS_PACK+"generic-flet"
+                                [~[0,OPTIONAL,MULT,[0,1,~[2,OPTIONAL,0],
+                                                    ~[3,MULT,OPTIONAL,[":method",0,1,2]]]]],1]]
+                   "glabels" -> ~[[~[[GEN_FUN_NAME, LAMBDA_LIST
+                                      ~[["options", CLASS_OPTIONS], OPTIONAL]
+                                      ~[["meth", ~[METH_QUALIF, OPTIONAL], SPEC_LAMBDA_LIST
+                                         GEN_FUN_METH_BODY_BLOCK], OPTIONAL, MULT]], OPTIONAL, MULT]
+                                   BODY_BLOCK]
+                                  [CLOS_PACK+"generic-labels"
+                                   [~[0,OPTIONAL,MULT,[0,1,~[2,OPTIONAL,0],
+                                                       ~[3,MULT,OPTIONAL,[":method",0,1,2]]]]],1]]
+                   "gfun" -> ~[[LAMBDA_LIST
+                                ~[["options", CLASS_OPTIONS], OPTIONAL]
+                                ~[["meth", ~[METH_QUALIF, OPTIONAL], SPEC_LAMBDA_LIST
+                                   LAMBDA_BODY_BLOCK], OPTIONAL, MULT]]
+                               [CL_PACK+"generic-function",0,~[1,OPTIONAL,0],
+                                ~[2,MULT,OPTIONAL,[":method",0,1,2]]]]} )
+
+
+; SPEC_SYMB is used in string reading to mark elements
+const( SPEC_SYMB = [] )
+SPEC_SYMB.extend(OPER_SYMB,TL_BLOCK.tKeys(),AUX_SPEC_SYMB,TL_DIRECT_SPEC_SYMB)
+
+; tl-syntax-error
+cond &tl-syntax-error (&simple-error) {
+    message {:initarg=:message}
+    }
+
+; function for use inside of this package only
+def signalSyntaxError(errorMessage) {
+    error('&tl-syntax-error,:message=errorMessage,:&format-control =errorMessage)}
+

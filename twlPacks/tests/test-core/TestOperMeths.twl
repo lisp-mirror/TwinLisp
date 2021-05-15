@@ -1,0 +1,265 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+use unittest {testcase, tName, tFuns, assertEqual, assertTrue, assertFalse, assertCondition}
+
+class TestOperMeths (testcase) {
+    tName {:initform="TestOperMeths.twl"}
+    tFuns {:initform='~(&test-not-for-t
+                        &test-not-for-bitVector
+                        &test-and-for-t
+                        &test-and-for-bitVector
+                        &test-or-for-t
+                        &test-or-for-bitVector
+                        &test-xor-for-t
+                        &test-xor-for-bitVector
+                        &test-equality-for-numbers
+                        &test-equality-for-strings
+                        &test-equality-for-chars
+                        &test-equality-for-lists
+                        &test-equality-for-vectors
+                        &test-equality-for-hashTable
+                        &test-addition-for-lists
+                        &test-addition-for-vectors
+                        &test-addition-for-string-and-chars
+                        &test-modulus-division
+                        &test-exponentiation
+                        &test-string-formatting
+                        &test-insert-operator)}
+    }
+
+meth &test-not-for-t (ts==TestOperMeths) {
+    ts.assertTrue(not nil
+                  :textOnFail="(not nil) should always be true")
+    ts.assertFalse(not t
+                  :textOnFail="(not t) should always be nil (false)")
+    ts.assertFalse(not "string"
+                  :textOnFail="(not obj) should always be nil (false), when obj is not nil")
+    }
+
+meth &test-not-for-bitVector (ts==TestOperMeths) {
+    ts.assertEqual(not #* , #*
+                   :test=#'equal
+                   :textOnFail="Bitwise-not of an empty bit-vector should be an empty bit-vector")
+    ts.assertEqual(not #*0011, #*1100
+                   :test=#'equal
+                   :textOnFail="Bitwise-not should return a bit-vector with every bit flipped")
+    }
+
+meth &test-and-for-t (ts==TestOperMeths) {
+    ts.assertFalse(t and nil
+                  :textOnFail="(t and nil) should always be nil (false)")
+    ts.assertFalse(nil and t
+                  :textOnFail="(nil and t) should always be nil (false)")
+    ts.assertFalse(nil and t
+                  :textOnFail="(nil and t) should always be nil (false)")
+    ts.assertTrue(t and t
+                  :textOnFail="(t and t) should always be true")
+    ts.assertTrue(12 and "string"
+                  :textOnFail="(obj1 and obj2) should always be true, when obj1 and obj2 or not nil")
+    }
+
+meth &test-and-for-bitVector (ts==TestOperMeths) {
+    ts.assertEqual(#* and #* , #*
+                   :test=#'equal
+                   :textOnFail="Bitwise-and of an empty bit-vectors should be an empty bit-vector")
+    ts.assertEqual(#*1010 and #*0011 , #*0010
+                   :test=#'equal
+                   :textOnFail="Bitwise-and should produce a vector with every bit being bit-anding of corresponding bits from given vectors")
+    ts.assertCondition(error, #*110 and #*110011
+                   :textOnFail="Bitwise-and should raise an error when given vectors have different length")
+    }
+
+meth &test-or-for-t (ts==TestOperMeths) {
+    ts.assertTrue(t or nil
+                  :textOnFail="(t or nil) should always be true")
+    ts.assertTrue(nil or t
+                  :textOnFail="(nil or t) should always be true")
+    ts.assertTrue(t or t
+                  :textOnFail="(t or t) should always be true")
+    ts.assertFalse(nil or nil
+                  :textOnFail="(nil or nil) should always be nil (false)")
+    ts.assertTrue(nil or "string"
+                  :textOnFail="(nil or obj) should be true, when obj is not nil")
+    }
+
+meth &test-or-for-bitVector (ts==TestOperMeths) {
+    ts.assertEqual(#* or #* , #*
+                   :test=#'equal
+                   :textOnFail="Bitwise-or of an empty bit-vectors should be an empty bit-vector")
+    ts.assertEqual(#*1010 or #*0110 , #*1110
+                   :test=#'equal
+                   :textOnFail="Bitwise-or should produce a vector with every bit being bit-oring of corresponding bits from given vectors")
+    ts.assertCondition(error, #*110 or #*110011
+                   :textOnFail="Bitwise-or should raise an error when given vectors have different length")
+    }
+
+meth &test-xor-for-t (ts==TestOperMeths) {
+    ts.assertTrue(t xor nil
+                  :textOnFail="(t xor nil) should always be true")
+    ts.assertTrue(nil xor t
+                  :textOnFail="(nil xor t) should always be true")
+    ts.assertFalse(t xor t
+                  :textOnFail="(t xor t) should always be nil (false)")
+    ts.assertFalse(nil xor nil
+                  :textOnFail="(nil xor nil) should always be nil (false)")
+    ts.assertTrue(nil xor "string"
+                  :textOnFail="(nil xor obj) should be true, when obj is not nil")
+    }
+
+meth &test-xor-for-bitVector (ts==TestOperMeths) {
+    ts.assertEqual(#* xor #* , #*
+                   :test=#'equal
+                   :textOnFail="Bitwise-or of an empty bit-vectors should be an empty bit-vector")
+    ts.assertEqual(#*1010 xor #*0110 , #*1100
+                   :test=#'equal
+                   :textOnFail="Bitwise-or should produce a vector with every bit being bit-oring of corresponding bits from given vectors")
+    ts.assertCondition(error, #*110 xor #*110011
+                   :textOnFail="Bitwise-or should raise an error when given vectors have different length")
+    }
+
+meth &test-equality-for-numbers (ts==TestOperMeths) {
+    ts.assertTrue(1==1)
+    ts.assertFalse(1!=1)
+    ts.assertTrue(1!=2)
+    ts.assertFalse(1==2)
+    ts.assertTrue(1==1.0)
+    ts.assertFalse(1!=1.0)
+    ts.assertTrue(1==#c(1,0))   ; etc., like lisp's equality for numbers
+    }
+
+meth &test-equality-for-strings (ts==TestOperMeths) {
+    ts.assertTrue("abcde"=="abcde")
+    ts.assertFalse("abcde"!="abcde")
+    ts.assertTrue("abcde"!="abcdef")
+    ts.assertFalse("abcde"=="abcdef")
+    ts.assertTrue("abcde"!="Abcde")
+    ts.assertFalse("abcde"=="Abcde")
+    }
+
+meth &test-equality-for-chars (ts==TestOperMeths) {
+    ts.assertTrue(#\a == #\a )
+    ts.assertFalse(#\a != #\a )
+    ts.assertTrue(#\a != #\b )
+    ts.assertFalse(#\a == #\b )
+    ts.assertTrue(#\a != #\A )
+    ts.assertFalse(#\a == #\A )
+    }
+
+meth &test-equality-for-lists (ts==TestOperMeths) {
+    ts.assertTrue(~[]==~[])
+    ts.assertFalse(~[]!=~[])
+    ts.assertTrue(~[1, 2, "abc"]==~[1, 2, "abc"])
+    ts.assertFalse(~[1, 2, "abc"]!=~[1, 2, "abc"])
+    ts.assertTrue(~[1, 3, "abc"]!=~[1, 2, "abc"])
+    ts.assertFalse(~[1, 3, "abc"]==~[1, 2, "abc"])
+    ts.assertTrue(~[1, 2, "abc", 3]!=~[1, 2, "abc"])
+    ts.assertFalse(~[1, 2, "abc", 3]==~[1, 2, "abc"])
+    }
+
+meth &test-equality-for-vectors (ts==TestOperMeths) {
+    ts.assertTrue([]==[])
+    ts.assertFalse([]!=[])
+    ts.assertTrue([1, 2, "abc"]==[1, 2, "abc"])
+    ts.assertFalse([1, 2, "abc"]!=[1, 2, "abc"])
+    ts.assertTrue([1, 3, "abc"]!=[1, 2, "abc"])
+    ts.assertFalse([1, 3, "abc"]==[1, 2, "abc"])
+    ts.assertTrue([1, 2, "abc", 3]!=[1, 2, "abc"])
+    ts.assertFalse([1, 2, "abc", 3]==[1, 2, "abc"])
+    }
+
+meth &test-equality-for-hashTable (ts==TestOperMeths) {
+    ts.assertTrue({}=={})
+    ts.assertFalse({}!={})
+    ts.assertTrue({"abc"->1}=={"abc"->1})
+    ts.assertFalse({"abc"->1}!={"abc"->1})
+    ts.assertTrue({"abc"->~[1,2,["b","a"]]}=={"abc"->~[1,2,["b","a"]]})
+    ts.assertFalse({"abc"->~[1,2,["b","a"]]}!={"abc"->~[1,2,["b","a"]]})
+    ts.assertTrue({"abc"->2}!={"abc"->1})
+    ts.assertFalse({"abc"->2}=={"abc"->1})
+    ts.assertTrue({"abc"->1, 23->"gh"}!={"abc"->1})
+    ts.assertFalse({"abc"->1, 23->"gh"}=={"abc"->1})
+    }
+
+meth &test-addition-for-lists (ts==TestOperMeths) {
+    ts.assertEqual(~[1,2,3]+~[], ~[1,2,3])
+    ts.assertEqual(~[1,2,3]+~[4,5,6], ~[1,2,3,4,5,6])
+    }
+
+meth &test-addition-for-vectors (ts==TestOperMeths) {
+    ts.assertEqual([1,2,3]+[], [1,2,3])
+    ts.assertEqual([1,2,3]+[4,5,6], [1,2,3,4,5,6])
+    }
+
+meth &test-addition-for-string-and-chars (ts==TestOperMeths) {
+    ts.assertEqual(""+"def", "def")
+    ts.assertEqual("abc "+"def", "abc def")
+    ts.assertEqual(#\A +"def", "Adef")
+    ts.assertEqual("def"+ #\A , "defA")
+    }
+
+meth &test-modulus-division (ts==TestOperMeths) {
+    ts.assertEqual(7%2, 3)
+    }
+
+meth &test-exponentiation (ts==TestOperMeths) {
+    ts.assertEqual(2**5, 32)
+    }
+
+meth &test-string-formatting (ts==TestOperMeths) {
+    ts.assertEqual("num: ~d" % 32, "num: 32")
+    ts.assertEqual("string: ~A" % "boo", "string: boo")
+    ts.assertEqual("num1: ~d, num2: ~d" % [32,65], "num1: 32, num2: 65")
+    ts.assertEqual("num1: ~d, num2: ~d" % ~[32,65], "num1: 32, num2: 65")
+    ts.assertEqual("nil: ~A" % ~[], "nil: NIL")
+    }
+
+meth &test-insert-operator (ts==TestOperMeths) {
+    a = []
+    a << "a"
+    ts.assertEqual(a, ["a"])
+    a << ~[1,2]
+    ts.assertEqual(a, ["a",~[1,2]])
+    a << [3,4]
+    ts.assertEqual(a, ["a",~[1,2],[3,4]])
+    ts.assertEqual(a << "e", a)
+    a << "c" << "d"
+    ts.assertEqual(a, ["a",~[1,2],[3,4],"e","c","d"])
+    b = ~[]
+    ts.assertCondition(&null-list-error, b << "a")
+    b = ~["a"]
+    b << "b"
+    ts.assertEqual(b, ~["a","b"])
+    b << ~[1,2]
+    ts.assertEqual(b, ~["a","b",~[1,2]])
+    b << [3,4]
+    ts.assertEqual(b, ~["a","b",~[1,2],[3,4]])
+    ts.assertEqual(b << "e", b)
+    b << "c" << "d"
+    ts.assertEqual(b, ~["a","b",~[1,2],[3,4],"e","c","d"])
+    str = &make-string-output-stream()
+    str << "Hi,"
+    str << #\Space
+    str << "Bob!"
+    ts.assertEqual(str.&get-output-stream-string(), "Hi, Bob!")
+    ts.assertEqual(str << "-- ", str)
+    str << "Bye," << #\Space << "Mike."
+    ts.assertEqual(str.&get-output-stream-string(), "-- Bye, Mike.")
+    }
+
+

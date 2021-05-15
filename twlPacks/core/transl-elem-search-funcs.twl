@@ -1,0 +1,123 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+inside "TWINLISP"
+
+
+def getElemsInBrackets(indOpenBr,elems,retWithBrackets=nil) {
+    indClosBr = nil
+    dos (expClosBr = [BRACKETS[elems[indOpenBr].type]]
+         numOpenBr = 0
+         ind = elems.growOnIndex(indOpenBr+1))
+        (ind>=len(elems)
+         signalSyntaxError("Expected closing bracket to match '~A' on line ~D, position ~D, is missing" % ~[elems[indOpenBr].type,elems[indOpenBr].lineNum,elems[indOpenBr].start])) {
+        el = elems[ind]
+        if (BRACKETS.has_key(el.type)) {
+            ; it is an openning bracket
+            numOpenBr = numOpenBr+1
+            expClosBr.append(BRACKETS[el.type]) }
+        else {
+            if (CLOSING_BRACKETS.count(el.type)!=0) {
+                ; it is a closing bracket, but is it a correct one?
+                if (el.type==expClosBr[-1].string()) {
+                    numOpenBr = numOpenBr-1
+                    expClosBr.pop()
+                    if (numOpenBr<0) {
+                        indClosBr = ind
+                        break }}
+                else {
+                    signalSyntaxError("Expect closing bracket '~A' on line ~D, position ~D, but got '~A' instead" % ~[expClosBr[-1],el.lineNum,el.start,el.type]) }}}
+        ind = elems.growOnIndex(ind+1) }
+    if (retWithBrackets) {
+        elems[indOpenBr->indClosBr+1] @ indClosBr+1 }
+    else {
+        elems[indOpenBr+1->indClosBr] @ indClosBr }}
+
+
+def _getLineEndElemInd(startInd,elems) {
+    "Return the first line end element, or None"
+    do (ind=startInd->ind+1)
+        (ind>=elems.len()
+         nil @ ind) {
+        if (elems[ind].type==LINE_END_ELEM) {
+            break t @ ind }}}
+
+
+def skipElems(elemTypes,startInd,elems,onSameLine=t) {
+    "Seeks index of the first element other then the ones that have to be skipped. If found, returns True and index, else False and len(elems) or LINE_END_ELEM index"
+    do (ind=startInd) 
+        (ind>=len(elems)
+         nil @ ind) {
+        elType = elems[ind].type
+        if (elType==LINE_END_ELEM) {
+            if (onSameLine) { break nil @ ind }}
+        elif (elType=="\\") {
+            lineEndFound @ ind = _getLineEndElemInd(ind,elems)
+            if (not lineEndFound) { break nil @ len(elems) }}
+        elif (elemTypes.count(elType)==0) {
+            break t @ ind }
+        ind = elems.growOnIndex(ind+1) }}
+
+
+def getRequiredElemInd(elemType,startInd,elems,onSameLine=t) {
+    "Required element shall always be on the same line (or continued line)"
+    elemFound @ ind = skipElems([WHITE_ELEM],startInd,elems,onSameLine)
+    if (not elemFound) {
+        if (onSameLine) {
+            signalSyntaxError("Expect element '~A' on line ~D, but line ends" % ~[elemType,elems[startInd].lineNum]) }
+        else {
+            if (startInd<len(elems)) {
+                signalSyntaxError("Expected element '~A' is missing on/after line ~D" % ~[elemType,elems[startInd].lineNum]) }
+            else {
+                signalSyntaxError("Expected element '~A' is missing" % elemType) }}}
+    if (elems[ind].type==elemType) { ind }
+    else {
+        signalSyntaxError("Expected element '~A', but got instead element '~A' on line ~D" % ~[elemType,elems[ind].type,elems[ind].lineNum]) }}
+
+
+def getRequiredElemInd2(elemType,startInd,elems,onSameLine=t) {
+    handle {
+        t @ getRequiredElemInd(elemType,startInd,elems,onSameLine) }
+    cond &tl-syntax-error {
+        nil @ startInd }}
+
+
+def getShortcutInd(startInd,elems,onSameLine=t) {
+    for (elemType,SHORTCUT_OPERS.tKeys())
+        (nil @ startInd) {
+        elemFound @ ind = getRequiredElemInd2(elemType,startInd,elems,onSameLine)
+        if (elemFound) { break t @ ind }}}
+
+
+def getElemIndInOperExpr(elemType,startInd,elems) {
+    do (ind=startInd) 
+        (ind>=len(elems)
+         nil @ nil) {
+        elemFound @ ind = skipElems([WHITE_ELEM],ind,elems)
+        if (not elemFound) { break nil @ nil }
+        if (elems[ind].type==elemType) {
+            break t @ ind }
+        elif (BRACKETS.has_key(elems[ind].type)) {
+            ind = &nth-value(1,getElemsInBrackets(ind,elems,t)) }
+        elif ((elems[ind].type==LINE_END_ELEM) or (elems[ind].type==",")) {
+            break nil @ nil }
+        else {
+            ind = ind+1 }}}
+
+

@@ -1,0 +1,103 @@
+;
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+;; load TL before using its methods
+let (tlPath=namestring(ext:cd())) {
+    pathStr = concatenate('string,tlPath,"/**/")
+    &logical-pathname-translations("tl-sys") = ~[~["**;*.*", pathStr ]
+                                                 ~[";**;*.*", pathStr ]] }
+let (&*error-output* = &make-broadcast-stream()) { ; bit sink, like dev/null
+    _load(&logical-pathname("tl-sys:core;tl-def")) }
+
+;; set paths
+let (envTlPath=getenv("TLPATH"),pathList=~[]) {
+    if (envTlPath) {
+        do (colInd) {
+            colInd = envTlPath.index(#\:)
+            if (colInd) {
+                if (envTlPath[->colInd].len()!=0) {
+                        pathList.append(pathname(envTlPath[->colInd])) }
+                envTlPath = envTlPath[colInd+1->] }
+            else {
+                if (envTlPath.len()!=0) {
+                    pathList.append(pathname(envTlPath[->colInd])) }
+                break }}}
+    &*tl-load-paths* = &*tl-load-paths* [->1] + pathList + &*tl-load-paths* [1->] }
+
+;; adjust clisp's *load-paths*
+&*load-paths* = &*tl-load-paths* + &*load-paths*
+
+;; act according to specified &*args*
+let (treplOn=nil, verbose=nil, fileToLoad=nil, compiling=nil) {
+    global &*args*
+    act = block &proc-arg {
+        do () (endp(&*args*), :trepl) {
+                  if (car(&*args*)[0]==#\- ) {
+                      for (char,car(&*args*)[1->]) {
+                          comcase (char)
+                          is (#\h) {
+                              break from &proc-arg :help }
+                          is (#\t) {
+                              &*args* = cdr(&*args*)
+                              break from &proc-arg :translate }
+                          is (#\i) {
+                              treplOn = t }
+                          is (#\v) {
+                              verbose = t }
+                          is (#\c) {
+                              compiling = t }}}
+                  else {
+                      fileToLoad = car(&*args*)
+                      &*args* = cdr(&*args*)
+                      break from &proc-arg :load }
+                  &*args* = cdr(&*args*) }}
+    comcase (act)
+    is (:help) {
+        cout() << \
+"usage: tlisp [ -h |
+              [-i] [-v] -t files |
+              [-i] [-v] [-c] file [args] ]
+When no option or file given, TwinLisp interpreter is entered.
+Available options:
+ -h  : print this help message and exit
+ -t  : translate files given after this option
+ -i  : enter interpreter after loading a file, or translation
+ -v  : verbose display
+ -c  : file is loaded and statements are compiled on the fly
+File is loaded and executed with &*args* == list(args).
+Other environment variables:
+TLSTARTUP : file executed on interactive startup (no default)"
+        }
+    is (:translate) {
+        &translate-files(&*args*,verbose) }
+    is (:trepl) {
+        handle {
+            startupFile = getenv("TLSTARTUP")
+            if (startupFile.len()!=0) {
+                _load(startupFile) }}
+        cond error (er) {
+            cout() << "~%Error occured while loading startup file:~%~A" % er }
+        load(&logical-pathname("tl-sys:core;interpreter")) }
+    is (:load) {
+        load(fileToLoad,:compiling=compiling
+             :verbose=verbose,:&if-does-not-exist =t)
+        if (treplOn) {
+            load(&logical-pathname("tl-sys:core;interpreter")) }}}
+
+

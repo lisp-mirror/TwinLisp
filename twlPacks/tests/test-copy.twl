@@ -1,0 +1,199 @@
+;Copyright (C) 2006 Mikalai Birukou
+;
+;This file is part of TwinLisp.
+;
+;    TwinLisp is free software; you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    TwinLisp is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with TwinLisp; if not, write to the Free Software
+;    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+cout() << #\Newline << "Testing TwinLisp's copy module:" << #\Newline
+
+require("copy")
+use copy { copy, deepcopy }
+
+require("unittest")
+use unittest {testcase, tName, tFuns, assertEqual, assertNotEqual, assertTrue, assertFalse }
+
+;;;
+;;;  testing copying
+;;;
+class TestCopy (testcase) {
+    tName {:initform="test-copy.twl"}
+    tFuns {:initform='~(&test-copy-list
+                        &test-copy-vector
+                        &test-copy-hash-table
+                        &test-copy-atoms
+                        &test-copy-structure
+                        &test-copy-object
+                        )}
+    }
+
+meth &test-copy-list (ts==TestCopy) {
+    a = ~[]
+    ts.assertEqual(a.copy(), ~[])
+    b = ~[1,2,[3,4],6]
+    b[3] = b
+    d = b.copy()
+    ts.assertFalse(eq(b,d))
+    ts.assertEqual(b,d)
+    ts.assertTrue(eq(b[2],d[2]))
+    ts.assertTrue(eq(d[3],b))
+    }
+
+meth &test-copy-vector (ts==TestCopy) {
+    a = []
+    ts.assertEqual(a.copy(), [])
+    b = [1,2,[3,4],6]
+    b[3] = b
+    d = b.copy()
+    ts.assertFalse(eq(b,d))
+    ts.assertEqual(b,d)
+    ts.assertTrue(eq(b[2],d[2]))
+    ts.assertTrue(eq(d[3],b))
+    }
+
+meth &test-copy-hash-table (ts==TestCopy) {
+    a = {}
+    ts.assertEqual(a.copy(), {})
+    b = { "vect"->[], "list"->~[1,2], "a"->1 }
+    d = b.copy()
+    ts.assertFalse(eq(b,d))
+    ts.assertEqual(b,d)
+    ts.assertTrue(eq(b["vect"],d["vect"]))
+    ts.assertTrue(eq(b["list"],d["list"]))
+    }
+
+meth &test-copy-atoms (ts==TestCopy) {
+    for (a,[7,"abc",#\a,#*1010,'ts],b) {
+        b = a.copy()
+        ts.assertEqual(a,b) }
+    }
+
+; some structure
+struct strBar { a,b,c }
+
+meth &test-copy-structure (ts==TestCopy) {
+    a = strBar.new(:a="a",:b=~[1,2,[3,4]],:c=strBar.new())
+    b = a.copy()
+    ts.assertNotEqual(a,b)
+    ts.assertEqual(a.a,b.a)
+    ts.assertTrue(eq(a.b,b.b))
+    ts.assertTrue(eq(a.c,b.c))
+    }
+
+; some class
+class clBar {
+    a {:initarg=:a}
+    b {:initarg=:b}
+    c {:initarg=:c}
+    d }
+
+meth &test-copy-object (ts==TestCopy) {
+    a = clBar.new(:a="a",:b=~[1,2,[3,4]],:c=clBar.new())
+    b = a.copy()
+    ts.assertNotEqual(a,b)
+    ts.assertEqual(a.a,b.a)
+    ts.assertTrue(eq(a.b,b.b))
+    ts.assertTrue(eq(a.c,b.c))
+    ts.assertFalse(&slot-boundp(a,'d))
+    }
+
+
+;;---------------------------------------
+
+;;;
+;;;  testing deepcopying
+;;;
+class TestDeepcopy (testcase) {
+    tName {:initform="test-copy.twl"}
+    tFuns {:initform='~(&test-deepcopy-list
+                        &test-deepcopy-vector
+                        &test-deepcopy-hash-table
+                        &test-deepcopy-atoms
+                        &test-deepcopy-structure
+                        &test-deepcopy-object
+                        )}
+    }
+
+meth &test-deepcopy-atoms (ts==TestDeepcopy) {
+    for (a,[7,"abc",#\a,#*1010,'ts],b) {
+        b = a.deepcopy()
+        ts.assertEqual(a,b) }
+    }
+
+meth &test-deepcopy-list (ts==TestDeepcopy) {
+    a = ~[]
+    ts.assertEqual(a.deepcopy(), ~[])
+    b = ~[1,2,[3,4],6]
+    b[3] = b
+    d = b.deepcopy()
+    ts.assertFalse(eq(b,d))
+    for (i,~[0,1,2]) {
+        ts.assertEqual(b[i],d[i]) }
+    ts.assertFalse(eq(b[2],d[2]))
+    ts.assertFalse(eq(d[3],b))
+    ts.assertTrue(eq(d[3],d))
+    }
+
+meth &test-deepcopy-vector (ts==TestDeepcopy) {
+    a = []
+    ts.assertEqual(a.deepcopy(), [])
+    b = [1,2,[3,4],6]
+    b[3] = b
+    d = b.deepcopy()
+    ts.assertFalse(eq(b,d))
+    for (i,~[0,1,2]) {
+        ts.assertEqual(b[i],d[i]) }
+    ts.assertFalse(eq(b[2],d[2]))
+    ts.assertFalse(eq(d[3],b))
+    ts.assertTrue(eq(d[3],d))
+    }
+
+meth &test-deepcopy-hash-table (ts==TestDeepcopy) {
+    a = {}
+    ts.assertEqual(a.deepcopy(), {})
+    b = { "vect"->[], "list"->~[1,2], "a"->1 }
+    d = b.deepcopy()
+    ts.assertFalse(eq(b,d))
+    ts.assertEqual(b,d)
+    ts.assertFalse(eq(b["vect"],d["vect"]))
+    ts.assertFalse(eq(b["list"],d["list"]))
+    }
+
+meth &test-deepcopy-structure (ts==TestDeepcopy) {
+    a = strBar.new(:a="a",:b=~[1,2,[3,4]],:c=strBar.new())
+    b = a.deepcopy()
+    ts.assertNotEqual(a,b)
+    ts.assertEqual(a.a,b.a)
+    ts.assertEqual(a.b,b.b)
+    ts.assertFalse(eq(a.b,b.b))
+    ts.assertFalse(eq(a.c,b.c))
+    }
+
+meth &test-deepcopy-object (ts==TestDeepcopy) {
+    a = clBar.new(:a="a",:b=~[1,2,[3,4]],:c=clBar.new())
+    b = a.deepcopy()
+    ts.assertNotEqual(a,b)
+    ts.assertEqual(a.a,b.a)
+    ts.assertEqual(a.b,b.b)
+    ts.assertFalse(eq(a.b,b.b))
+    ts.assertFalse(eq(a.c,b.c))
+    ts.assertFalse(&slot-boundp(a,'d))
+    }
+
+
+
+
+;; run the test
+unittest:runSuites('~(TestCopy,TestDeepcopy)
+                   :verbosity=1)

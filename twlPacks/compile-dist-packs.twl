@@ -1,0 +1,16 @@
+;; put here instructions to compile each pack in dist-packages folder
+
+; unittest pack
+load("unittest")
+&compile-file("unittest.lisp")
+
+; copy pack
+load("copy")
+&compile-file("copy.lisp")
+
+; Clisp integration module
+ext:&without-package-lock(.("SYSTEM")) {
+    load("clisp-pluggin")
+    &compile-file("clisp-pluggin.lisp") }
+
+
