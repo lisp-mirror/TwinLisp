@@ -1,0 +1,259 @@
+body {
+	background-color: #DCE8FC;
+}
+
+/*Navigation sections - should not be displayed in print*/
+    div.navigation {
+	    display: none;
+    }
+
+    /* list and link to create horizontal navigation menu */
+    ul.nav {
+    	padding: 0;
+    	list-style-type: none;
+    }
+
+    li.nav {
+    	display: inline;
+    }
+
+    a.nav:link {
+    	float: left;
+    	min-width: 12em;
+    	line-height: 1.5em;
+    	margin-top: 1em;
+    	margin-right: 2em;
+    	border-style: groove;
+    	border-width: 1px;
+    	color: black;
+    	background-color: #E4E4E4;
+        font-weight: bold;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
+    }
+    a.nav:visited {
+    	float: left;
+    	min-width: 12em;
+    	line-height: 1.5em;
+    	margin-top: 1em;
+    	margin-right: 2em;
+    	border-style: groove;
+    	border-width: 1px;
+    	color: black;
+    	background-color: #E4E4E4;
+        font-weight: bold;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
+    }
+    a.nav:hover {
+    	float: left;
+    	min-width: 12em;
+    	line-height: 1.5em;
+    	margin-top: 1em;
+    	margin-right: 2em;
+    	border-style: solid;
+    	border-width: 1px;
+    	color: black;
+    	background-color: white;
+        font-weight: bold;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
+    }
+
+/*Big centered diagrams sections*/
+    div.centerImage {
+    	float: none;
+        border-style: none;
+    }
+
+    p.centerImage {
+        text-align: center;
+    }
+
+    p.imageCaption {
+        text-align: justify;
+        margin-left: 20%;
+        margin-right: 20%;
+    }
+
+    img.centerImage {
+        border: 0;
+    }
+
+/*Main text section*/
+    div#maintext {
+    	font-family: roman, 'times new roman', times, serif;
+
+    	background-color: white;
+
+    	/*div placing*/
+    	float: none;
+    	margin-left: 3%;
+    	margin-right: 3%;
+
+    	/*border specification*/
+        border-style: dotted;
+    	border-width: 1px;
+    }
+
+    h1 {
+    	text-align: center;
+    }
+
+    h2 {
+        margin-top: 2em;
+    	margin-left: 1em;
+    }
+
+    h3 {
+        margin-top: 1.8em;
+    	margin-left: 1em;
+    }
+
+    h4 {
+        margin-top: 1.5em;
+    	margin-left: 1em;
+    }
+
+    p {
+    	text-align: justify;
+    	margin-left: 1em;
+    	margin-right: 1em;
+    }
+
+    p.backToContent {
+        font-weight: bold;
+        font-size: 75%;
+    	margin-left: 4em;
+    	margin-top: 2em;
+    	margin-bottom: 4em;
+    }
+
+    em {
+        font-style: italic;
+    }
+
+    /* single contents list */
+    ul#contents {
+        list-style-type: none;
+    	margin-bottom: 4em;
+    }
+
+    li.contents {
+        font-size: 1.2em;
+        font-weight: bold;
+    }
+
+    li.cont_lower1 {
+        font-size: 1.15em;
+        font-weight: bold;
+    	margin-left: 1em;
+    }
+
+    li.cont_lower2 {
+        font-size: 1.1em;
+        font-weight: bold;
+    	margin-left: 2em;
+    }
+
+    li.cont_lower3 {
+        font-size: 1.05em;
+        font-weight: bold;
+    	margin-left: 3em;
+    }
+
+    a.inText:link {
+        color: blue;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    a.inText:visited {
+        color: blue;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    a.inText:hover {
+        color: black;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    a.crossSelfRef:link {
+        color: blue;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    a.crossSelfRef:visited {
+        color: blue;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    a.crossSelfRef:hover {
+        color: black;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    a.contents:link {
+        color: blue;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    a.contents:visited {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    a.contents:hover {
+        color: black;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    a.backToContent:link {
+        color: blue;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    a.backToContent:visited {
+        color: blue;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    a.backToContent:hover {
+        color: black;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+/*XHTML validation section - should not be displayed in print*/
+    div#validation {
+	    display: none;
+    }
+
+    p#validate {
+    	text-align: right;
+    	margin-left: 1em;
+    	margin-right: 1em;
+    }
+
+    img.validate {
+        border: 0;
+    }
+
+/*Legal section*/
+    div#legalize {
+        margin-left: 3%;
+        margin-right: 3%;
+    	border-style: groove;
+    	border-width: 1px;
+    }
+
+    p.legalize {
+        font-size: 60%;
+        text-align: justify;
+    }
+

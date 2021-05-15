@@ -1,0 +1,382 @@
+Below you can find comparisons of macros written in Common Lisp and TwinLisp.
+Format is as follows:
+ - Statement about the source of the macro (two books on Common Lisp have been used)
+ - "CLisp: ..." shows macro's code as it is given in the book
+ - "TwinLisp: ..." shows how the same macro is written in TwinLisp
+ - "Translator's output: ..." shows an actual output of a TwinLisp translator (this output is then given to lisp mashine to run)
+
+Pay attention to the fact that writting macros in TwinLisp is no more difficult then writting 'em in Common Lisp.
+
+
+From http://www.gigamonkeys.com/book/macros-standard-control-constructs.html
+section "WHEN and UNLESS"
+
+1.
+CLisp:
+(defmacro when (condition &rest body)
+  `(if ,condition (progn ,@body)))
+
+TwLisp:
+mac when(condition,*body) {
+    `if ($condition) { progn{$@body} }}
+
+Translator's output:
+(defmacro when (condition &rest body) `(cond (,condition (progn ,@body))))
+
+2.
+CLisp:
+(defmacro unless (condition &rest body)
+  `(if (not ,condition) (progn ,@body)))
+
+TwLisp:
+mac unless(condition,*body) {
+    `if (not $condition) { progn{$@body} }}
+
+Translator's output:
+(defmacro unless (condition &rest body) `(cond ((_not_ ,condition) (progn ,@body))))
+
+
+From http://www.gigamonkeys.com/book/macros-defining-your-own.html
+section "Macro Parameters"
+1.
+Note: author is not use gensym here for simplicity of a discussion.
+CLisp:
+(defmacro do-primes (var-and-range &rest body)
+  (let ((var (first var-and-range))
+        (start (second var-and-range))
+        (end (third var-and-range)))
+    `(do ((,var (next-prime ,start) (next-prime (1+ ,var))))
+         ((> ,var ,end))
+       ,@body)))
+
+TwLisp:
+mac doPrimes (varAndRange,*body) {
+    let (var=varAndRange.first()
+         start=varAndRange.second()
+         end=varAndRange.third()) {
+        `do ($var=&next-prime($start) -> &next-prime($var+1))
+            ($var>$end) {
+             $@body}}}
+
+Translator's output (newlines are inserted for readability):
+(defmacro doPrimes (varAndRange &rest body)
+    (let ((var (first varAndRange))
+          (start (second varAndRange))
+          (end (third varAndRange)))
+      `(do ((,var (next-prime ,start) (next-prime (_+_ ,var 1))))
+           ((_>_ ,var ,end))
+         ,@body)))
+
+2.
+CLisp:
+(defmacro do-primes ((var start end) &body body)
+  `(do ((,var (next-prime ,start) (next-prime (1+ ,var))))
+       ((> ,var ,end))
+     ,@body))
+
+TwLisp:
+mac doPrimes(.(var,start,end),**body) {
+    `do ($var=&next-prime($start)->&next-prime($var+1))
+        ($var>$end) {
+         $@body}}
+
+Translator's output (newlines are inserted for readability):
+(defmacro doPrimes ((var start end) &body body)
+  `(do ((,var (next-prime ,start) (next-prime (_+_ ,var 1))))
+       ((_>_ ,var ,end))
+     ,@body))
+
+3.
+CLisp:
+(defmacro do-primes ((var start end) &body body)
+  `(do ((,var (next-prime ,start) (next-prime (1+ ,var)))
+        (ending-value ,end))
+       ((> ,var ending-value))
+     ,@body))
+
+TwLisp:
+mac doPrimes (.(var,start,end),**body) {
+    `do ($var=&next-prime($start)->&next-prime($var+1)
+         endingValue=$end)
+        ($var>endingValue) {
+         $@body}}
+
+Translator's output (newlines are inserted for readability):
+(defmacro doPrimes ((var start end) &body body)
+  `(do ((,var (next-prime ,start)(next-prime (_+_ ,var 1)))
+        (endingValue ,end))
+       ((_>_ ,var endingValue))
+     ,@body))
+
+4.
+CLisp:
+(defmacro do-primes ((var start end) &body body)
+  (let ((ending-value-name (gensym)))
+    `(do ((,var (next-prime ,start) (next-prime (1+ ,var)))
+          (,ending-value-name ,end))
+         ((> ,var ,ending-value-name))
+       ,@body)))
+
+TwLisp:
+mac doPrimes (.(var,start,end),**body) {
+    let (endingValueName=gensym()) {
+        `do ($var=&next-prime($start)->&next-prime($var+1)
+             $endingValueName=$end)
+            ($var>$endingValueName) {
+            $@body}}}
+
+Translator's output (newlines are inserted for readability):
+(defmacro doPrimes ((var start end) &body body)
+    (let ((endingValueName (gensym)))
+        `(do ((,var (next-prime ,start) (next-prime (_+_ ,var 1)))
+              (,endingValueName ,end))
+             ((_>_,var ,endingValueName))
+           ,@body)))
+
+From Paul Graham's "On Lisp", section 7.3, page 91
+CLisp:
+(defmacro while (test &body body)
+  `(do ()
+       ((not ,test))
+    ,@body))
+
+TwLisp:
+mac while(test,**body) {
+    `do () (not $test) {
+        $@body}}
+
+Translator's output (newlines are inserted for readability):
+(defmacro while (test &body body)
+  `(do () 
+       ((_not_ ,test))
+     ,@body))
+
+From Paul Graham's "On Lisp", section 7.5, page 94
+1.
+CLisp:
+(defmacro our-dolist ((var list &optional result) &body body)
+  `(progn
+      (mapc #'(lambda (,var) ,@body)
+            ,list)
+      (let ((,var nil))
+        ,result)))
+
+TwLisp:
+mac ourDoList(.(var,list,&&optional result),**body) {
+    `progn {
+        mapc(#'lambda($var){$@body}, $list)
+        let($var=nil) {
+            $result}}}
+
+Translator's output (newlines are inserted for readability):
+(defmacro ourDoList ((var list &optional result) &body body)
+  `(progn (mapc #'(lambda (,var) ,@body)
+                ,list)
+          (let ((,var nil))
+            ,result)))
+
+2.
+CLisp:
+(defmacro when-bind ((var expr) &body body)
+  `(let ((,var ,expr))
+     (when ,var
+        ,@body)))
+
+TwLisp:
+mac whenBind(.(var,expr),**body) {
+    `let($var=$expr) {
+        when($var){$@body}}}
+
+Translator's output (newlines are inserted for readability):
+(defmacro whenBind ((var expr) &body body)
+  `(let ((,var ,expr))
+     (when ,var
+        ,@body)))
+
+Call to this macro:
+CLisp:
+(whenBind (input (get-user-input))
+    (process input))
+
+TwLisp:
+whenBind(.(input,&get-user-input())) { process(input) }
+
+Translator's output:
+(whenBind (input (get-user-input))
+    (process input))
+
+From Paul Graham's "On Lisp", figure 7.6 ("A sketch of defmacro."), page 95
+CLisp:
+(defmacro our-expander (name) `(get ,name 'expander))
+(defmacro our-defmacro (name parms &body body)
+  (let ((g (gensym)))
+    `(progn
+        (setf (our-expander `,name)
+            #'(lambda (,g)
+                (block ,name
+                    (destructuring-bind ,parms (cdr ,g)
+                        ,@body))))
+        `,name)))
+(defun our-macroexpand-1 (expr)
+    (if (and (consp expr) (our-expander (car expr)))
+        (funcall (our-expander (car expr)) expr)
+        expr))
+
+TwLisp:
+mac ourExpander(name) { `get($name,'expander)}
+mac ourDefMacro(name,parms,**body) {
+    let(g=gensym()) {
+        `progn{
+            ourExpander(`$name) = \
+                #'lambda($g) {
+                    block $name {
+                        &destructuring-bind($parms,cdr($g),$@body)}}
+            `$name}}}
+def ourMacroexpand1(expr) {
+    if (consp(expr) and ourExpander(car(expr))) {
+        funcall(ourExpander(car(expr)),expr)}
+    else {
+        expr}}
+
+Translator's output (newlines are inserted for readability):
+(defmacro ourExpander (name) `(get ,name 'expander))
+(defmacro ourDefMacro (name parms &body body)
+  (let ((g (gensym)))
+     `(progn
+        (setf (ourExpander `,name)
+              #'(lambda (,g)
+                    (block ,name
+                        (destructuring-bind ,parms (cdr ,g)
+                            ,@body))))
+        `,name)))
+(defun ourMacroexpand1 (expr)
+   (cond ((_and_ (consp expr) (ourExpander (car expr)))
+          (funcall (ourExpander (car expr)) expr))
+         (t expr)))
+
+From Paul Graham's "On Lisp", figure 7.8 ("Implementing do."), page 98
+CLisp:
+(defmacro our-do (bindforms (test &rest result) &body body)
+  (let ((label (gensym)))
+    `(prog ,(make-initforms bindforms)
+           ,label
+           (if ,test
+                (return (progn ,@result)))
+           ,@body
+           (psetq ,@(make-stepforms bindforms))
+           (go ,label))))
+(defun make-initforms (bindforms)
+  (mapcar #'(lambda (b)
+                (if (consp b)
+                    (list (car b) (cadr b))
+                    (list b nil)))
+        bindforms))
+(defun make-stepforms (bindforms)
+  (mapcan #'(lambda (b)
+                (if (and (consp b) (third b))
+                    (list (car b) (third b))
+                    nil))
+        bindforms))
+
+TwLisp:
+mac ourDo(bindforms,.(test,*result),**body) {
+    let(label=gensym()) {
+        `prog ($@makeInitForms(bindforms)) {
+            $label
+            if ($test) { break progn{$@result}}
+            $@body
+            psetq($@makeStepForms(bindforms))
+            go($label)}}}
+def makeInitForms(bindforms) {
+    mapcar( #'lambda(b) {
+                if (consp(b)) { list(car(b),cadr(b)) }
+                else { list(b,nil) }},
+            bindforms)}
+def makeStepForms(bindforms) {
+    mapcan( #'lambda(b) {
+                if (consp(b) and third(b)) { list(car(b),third(b)) }
+                else { nil }},
+            bindforms)}
+
+Translator's output (newlines are inserted for readability):
+(defmacro ourDo (bindforms (test &rest result) &body body)
+  (let ((label (gensym)))
+    `(prog (,@(makeInitForms bindforms))
+           ,label
+           (cond (,test (return-from nil (progn,@result))))
+           ,@body
+           (psetq ,@(makeStepForms bindforms))
+           (go ,label))))
+(defun makeInitForms (bindforms)
+  (mapcar #'(lambda (b)
+                (cond ((consp b) (list (car b) (cadr b)))
+                      (t (list b nil))))
+          bindforms))
+(defun makeStepForms (bindforms)
+  (mapcan #'(lambda (b)
+                (cond ((_and_ (consp b) (third b)) (list (car b) (third b)))
+                      (t nil)))
+          bindforms))
+
+From Paul Graham's "On Lisp", figure 8.2 ("Move and scale filleted."), page 115
+CLisp:
+(defmacro with-redraw ((var objs) &body body)
+  (let ((gob (gensym))
+        (x0 (gensym)) (y0 (gensym))
+        (x1 (gensym)) (y1 (gensym)))
+     `(let ((,gob ,objs))
+         (multiple-value-bind (,x0 ,y0 ,x1 ,y1) (bounds ,gob)
+            (dolist (,var ,gob) ,@body)
+            (multiple-value-bind (xa ya xb yb) (bounds ,gob)
+                (redraw (min ,x0 xa) (min ,y0 ya)
+                        (max ,x1 xb) (max ,y1 yb)))))))
+(defun move-objs (objs dx dy)
+  (with-redraw (o objs)
+        (incf (obj-x o) dx)
+        (incf (obj-y o) dy)))
+(defun scale-objs (objs factor)
+  (with-redraw (o objs)
+        (setf (obj-dx o) (* (obj-dx o) factor)
+              (obj-dy o) (* (obj-dy o) factor))))
+
+TwLisp:
+mac withRedraw(.(var,objs),**body) {
+    let(gob=gensym(),x0=gensym(),y0=gensym()
+        x1=gensym(),y1=gensym()) {
+        `let($gob=$objs) {
+            &multiple-value-bind(.($x0,$y0,$x1,$y1),bounds($gob)) {
+                dolist ($var,$gob) { $@body }
+                &multiple-value-bind(.(xa,ya,xb,yb),bounds($gobs)) {
+                    redraw(min($x0,xa),min($y0,ya),max($x1,xb),max($y1,yb))}}}}}
+def moveObjs(objs,dx,dy) {
+    withRedraw(.(o,objs)) {
+        incf(&obj-x(o),dx)
+        incf(&obj-y(o),dy)}}
+def scaleObjs(objs,factor) {
+    withRedraw(.(o,objs)) {
+        &obj-dx(o) = &obj-dx(o)*factor
+        &obj-dy(o) = &obj-dy(o)*factor}}
+
+Translator's output (newlines are inserted for readability):
+(defmacro withRedraw ((var objs) &body body)
+  (let ((gob (gensym))
+        (x0 (gensym)) (y0 (gensym))
+        (x1 (gensym)) (y1 (gensym)))
+     `(let ((,gob ,objs))
+        (multiple-value-bind (,x0 ,y0 ,x1 ,y1) (bounds ,gob)
+            (dolist ,var ,gob ,@body)
+            (multiple-value-bind (xa ya xb yb) (bounds ,gobs)
+                (redraw (min ,x0 xa) (min ,y0 ya)
+                        (max ,x1 xb) (max ,y1 yb)))))))
+(defun moveObjs (objs dx dy)
+  (withRedraw (o objs)
+    (incf (obj-x o) dx)
+    (incf (obj-y o) dy)))
+(defun scaleObjs (objs factor)
+  (withRedraw (o objs)
+    (setf (obj-dx o) (_*_ (obj-dx o) factor))
+    (setf (obj-dy o) (_*_ (obj-dy o) factor))))
+
+
+
+
